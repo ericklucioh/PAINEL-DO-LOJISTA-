@@ -53,7 +53,7 @@ export function LoginForm() {
   });
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white/95 p-8 shadow-[0_30px_90px_rgba(15,23,42,0.12)] backdrop-blur">
+    <section className="rounded-[2rem] border border-slate-200 bg-white/95 p-8 shadow-[0_30px_90px_rgba(15,23,42,0.12)] backdrop-blur">
       <div className="mb-8 space-y-2">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
           Acesso
