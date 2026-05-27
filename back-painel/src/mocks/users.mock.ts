@@ -1,4 +1,9 @@
-import type { UsersListResponse } from "../modules/users/users.schema";
+import type {
+  CreateUserResponse,
+  DeactivateUserResponse,
+  UpdateUserResponse,
+  UsersListResponse,
+} from "../modules/users/users.schema";
 
 export const usersListMock: UsersListResponse = {
   data: [
@@ -8,6 +13,8 @@ export const usersListMock: UsersListResponse = {
       email: "admin@painel.com",
       role: "ADMIN",
       isActive: true,
+      createdAt: "2026-05-24T10:00:00.000Z",
+      updatedAt: "2026-05-24T10:00:00.000Z",
     },
     {
       id: "user_vendor_1",
@@ -15,6 +22,8 @@ export const usersListMock: UsersListResponse = {
       email: "joao@painel.com",
       role: "VENDEDOR",
       isActive: true,
+      createdAt: "2026-05-24T10:00:00.000Z",
+      updatedAt: "2026-05-24T10:00:00.000Z",
     },
   ],
   page: 1,
@@ -24,3 +33,21 @@ export const usersListMock: UsersListResponse = {
 };
 
 export const userSingleMock = usersListMock.data[0]!;
+
+export const createUserMock: CreateUserResponse = {
+  user: {
+    ...userSingleMock,
+    deletedAt: null,
+  },
+};
+
+export const updateUserMock: UpdateUserResponse = createUserMock;
+
+export const deactivateUserMock: DeactivateUserResponse = {
+  success: true,
+  user: {
+    ...userSingleMock,
+    deletedAt: "2026-05-27T10:00:00.000Z",
+    isActive: false,
+  },
+};

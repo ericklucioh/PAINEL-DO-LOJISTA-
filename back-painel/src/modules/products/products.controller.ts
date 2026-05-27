@@ -2,11 +2,9 @@ import type { RequestHandler } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 import {
   CreateProductBodySchema,
-  DeactivateProductResponseSchema,
   ProductByEanParamsSchema,
   ProductIdParamsSchema,
   ProductQuerySchema,
-  ProductsListResponseSchema,
   UpdateProductBodySchema,
 } from "./products.schema";
 import type { ProductsService } from "./products.service";
@@ -45,13 +43,7 @@ export function createProductsController({
       }
 
       const response = service.list(parsedQuery.data);
-      const parsedResponse = ProductsListResponseSchema.safeParse(response);
-
-      if (!parsedResponse.success) {
-        throw new Error("Products list response contract is invalid");
-      }
-
-      res.status(200).json(parsedResponse.data);
+      res.status(200).json(response);
     }),
 
     getByEan: asyncHandler((req, res) => {
@@ -122,12 +114,7 @@ export function createProductsController({
         return;
       }
 
-      const parsedResponse = DeactivateProductResponseSchema.safeParse(response);
-      if (!parsedResponse.success) {
-        throw new Error("Deactivate product response contract is invalid");
-      }
-
-      res.status(200).json(parsedResponse.data);
+      res.status(200).json(response);
     }),
   };
 }
