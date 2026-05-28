@@ -24,9 +24,11 @@ export function createApp(): Express {
     );
     app.use(express.json());
 
-    const authService = createAuthService();
+    const authServiceWithPrisma = createAuthService({
+        prisma,
+    });
     const authController = createAuthController({
-        service: authService,
+        service: authServiceWithPrisma,
     });
     const productsService = createProductsService({
         prisma,

@@ -1,10 +1,5 @@
 import { compare } from "bcryptjs";
 import {
-    authLoginMock,
-    authUsersMock,
-    type AuthMockUser,
-} from "../../mocks/auth.mock";
-import {
     signAccessToken,
     signRefreshToken,
     verifyRefreshToken,
@@ -18,57 +13,79 @@ import type {
     AuthUser,
 } from "./auth.schema";
 
+type AuthRole = "ADMIN" | "VENDEDOR";
+
+type AuthUserRecord = {
+    id: string;
+    fullName: string;
+    email: string;
+    passwordHash: string;
+    role: AuthRole;
+    deactivatedAt: Date | null;
+    deletedAt: Date | null;
+};
+
 export interface AuthService {
     login(input: AuthLoginInput): Promise<AuthLoginResponse>;
     refresh(refreshToken: string): Promise<AuthRefreshResponse>;
 }
 
-export interface CreateAuthServiceOptions {
-    users?: ReadonlyArray<AuthMockUser>;
-}
-
-function toAuthUser(user: AuthMockUser): AuthUser {
-    return {
-        id: user.id,
-        nome: user.nome,
-        tipo: user.tipo,
+export interface CreateAuthServiceDependencies {
+    prisma: {
+        user: {
+            findUnique(args: unknown): Promise<AuthUserRecord | null>;
+        };
     };
 }
 
-function createTokenPayload(user: AuthMockUser): AuthTokenPayload {
+function isActive(user: AuthUserRecord): boolean {
+    return user.deactivatedAt === null && user.deletedAt === null;
+}
+
+function toAuthUser(user: AuthUserRecord): AuthUser {
+    return {
+        id: user.id,
+        nome: user.fullName,
+        tipo: user.role,
+    };
+}
+
+function createTokenPayload(user: AuthUserRecord): AuthTokenPayload {
     return {
         sub: user.id,
         email: user.email,
-        nome: user.nome,
-        tipo: user.tipo,
+        nome: user.fullName,
+        tipo: user.role,
     };
 }
 
-function cloneAuthLoginMock(
+function createAuthResponse(
     user: AuthUser,
-    refreshToken: string,
     accessToken: string,
+    refreshToken: string,
 ): AuthLoginResponse {
     return {
-        ...authLoginMock,
         accessToken,
         refreshToken,
+        expiresIn: 900,
         user,
     };
 }
 
 export function createAuthService({
-    users = authUsersMock,
-}: CreateAuthServiceOptions = {}): AuthService {
+    prisma,
+}: CreateAuthServiceDependencies): AuthService {
     const refreshTokenStore = new Map<string, string>();
 
     return {
         async login(input) {
-            const account = users.find(
-                (user) => user.email === input.email && user.isActive,
-            );
+            const account = await prisma.user.findUnique({
+                where: {
+                    email: input.email,
+                },
+            });
 
-            if (account === undefined) {
+            if (account === null || !isActive(account)) {
                 throw createHttpError("Credenciais inválidas", 401);
             }
 
@@ -86,10 +103,10 @@ export function createAuthService({
 
             refreshTokenStore.set(refreshToken, account.id);
 
-            return cloneAuthLoginMock(
+            return createAuthResponse(
                 toAuthUser(account),
-                refreshToken,
                 accessToken,
+                refreshToken,
             );
         },
 
@@ -110,11 +127,13 @@ export function createAuthService({
                 throw createHttpError("Refresh token inválido", 401);
             }
 
-            const account = users.find(
-                (user) => user.id === decoded.sub && user.isActive,
-            );
+            const account = await prisma.user.findUnique({
+                where: {
+                    id: decoded.sub,
+                },
+            });
 
-            if (account === undefined) {
+            if (account === null || !isActive(account)) {
                 refreshTokenStore.delete(refreshToken);
                 throw createHttpError("Refresh token inválido", 401);
             }
