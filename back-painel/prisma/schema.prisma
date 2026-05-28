@@ -67,7 +67,7 @@ model InventoryMovement {
   createdAt DateTime @default(now())
 }
 
-enum StatusCaixa {
+enum StatusCash {
   ABERTO
   FECHADO
 }
@@ -79,7 +79,7 @@ model CashRegister {
   openedByUser     User        @relation(fields: [openedByUserId], references: [id])
 
   initialBalance   Decimal
-  status           StatusCaixa @default(ABERTO)
+  status           StatusCash @default(ABERTO)
   openedAt         DateTime    @default(now())
   closedAt         DateTime?
 
@@ -88,7 +88,7 @@ model CashRegister {
   deletedAt        DateTime?
 }
 
-enum TipoMovimentoCaixa {
+enum TypeCashMovement {
   ABERTURA
   VENDA
   CANCELAMENTO
@@ -104,7 +104,7 @@ model CashMovement {
 
   saleId          String?
 
-  type            TipoMovimentoCaixa
+  type            TypeCashMovement
   amount          Decimal
   note            String?
 
@@ -113,3 +113,5 @@ model CashMovement {
 
   createdAt       DateTime           @default(now())
 }
+// ===========
+
