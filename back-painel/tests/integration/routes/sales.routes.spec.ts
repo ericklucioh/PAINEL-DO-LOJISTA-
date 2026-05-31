@@ -51,19 +51,21 @@ describe("sales routes", () => {
                 soldByUserId: "user_vendor_1",
                 soldByUserName: "Joao Vendedor",
                 receiptNumber: "002",
-                subtotal: 42.7,
+                subtotal: 72.7,
                 discountAmount: 5,
-                totalAmount: 37.7,
+                totalAmount: 67.7,
                 paymentMethod: "DINHEIRO",
                 status: "CONFIRMED",
                 items: expect.arrayContaining([
                     expect.objectContaining({
                         productId: "prod_001",
                         quantity: 1,
+                        unitPriceSnapshot: 12.9,
                     }),
                     expect.objectContaining({
                         productId: "prod_002",
                         quantity: 2,
+                        unitPriceSnapshot: 29.9,
                     }),
                 ]),
             },
@@ -72,7 +74,7 @@ describe("sales routes", () => {
         const saleId = saleResponse.body.sale.id as string;
 
         const printResponse = await request(testApp.app)
-            .post("/api/sales/print-receipt")
+            .post("/api/print-receipt")
             .set("Authorization", bearer(vendor.accessToken))
             .send({
                 saleId,

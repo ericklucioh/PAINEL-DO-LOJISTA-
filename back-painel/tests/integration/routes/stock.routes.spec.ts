@@ -36,6 +36,7 @@ describe("stock routes", () => {
                 reason: "COMPRA",
                 quantity: 5,
                 balanceAfter: 23,
+                note: "Reposição",
             },
         });
 
@@ -56,6 +57,7 @@ describe("stock routes", () => {
                 reason: "PERDA",
                 quantity: 2,
                 balanceAfter: 21,
+                note: "Avaria",
             },
         });
 
@@ -76,11 +78,13 @@ describe("stock routes", () => {
                     type: "ENTRY",
                     quantity: 5,
                     balanceAfter: 23,
+                    note: "Reposição",
                 }),
                 expect.objectContaining({
                     type: "EXIT",
                     quantity: 2,
                     balanceAfter: 21,
+                    note: "Avaria",
                 }),
             ]),
         });
@@ -89,5 +93,30 @@ describe("stock routes", () => {
             where: { productId: "prod_001" },
         });
         expect(persistedMovements.length).toBeGreaterThanOrEqual(10);
+    });
+
+    it("allows stock to go negative on exit flows", async () => {
+        const admin = await loginAs(testApp.app, "admin@painel.com", "123456");
+
+        const response = await request(testApp.app)
+            .post("/api/stock/exit")
+            .set("Authorization", bearer(admin.accessToken))
+            .send({
+                productId: "prod_004",
+                quantity: 10,
+                reason: "PERDA",
+                note: "Quebra",
+            });
+
+        expect(response.statusCode).toBe(201);
+        expect(response.body).toMatchObject({
+            movement: {
+                type: "EXIT",
+                reason: "PERDA",
+                quantity: 10,
+                balanceAfter: -6,
+                note: "Quebra",
+            },
+        });
     });
 });

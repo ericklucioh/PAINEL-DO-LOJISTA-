@@ -34,6 +34,8 @@ describe("cash-registers routes", () => {
                 activeOpenedByUserId: "user_vendor_1",
                 initialBalance: 150,
                 status: "ABERTO",
+                closedAt: null,
+                deletedAt: null,
             },
         });
     });

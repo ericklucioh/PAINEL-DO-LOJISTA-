@@ -4,7 +4,6 @@ import request from "supertest";
 export interface LoginResult {
     accessToken: string;
     refreshToken: string;
-    cookies: string[];
 }
 
 export async function loginAs(
@@ -20,7 +19,6 @@ export async function loginAs(
     return {
         accessToken: response.body.accessToken as string,
         refreshToken: response.body.refreshToken as string,
-        cookies: response.headers["set-cookie"] ?? [],
     };
 }
 

@@ -105,5 +105,63 @@ describe("users routes", () => {
         expect(persistedUser).not.toBeNull();
         expect(persistedUser?.deletedAt).not.toBeNull();
         expect(persistedUser?.deactivatedAt).not.toBeNull();
+
+        const listAfterDeactivate = await request(testApp.app)
+            .get("/api/users")
+            .set("Authorization", bearer(accessToken))
+            .query({ page: 1 })
+            .expect(200);
+
+        expect(listAfterDeactivate.body).toMatchObject({
+            page: 1,
+            pageSize: 10,
+            totalItems: 2,
+        });
+        expect(
+            listAfterDeactivate.body.data.some(
+                (user: { id: string }) => user.id === createdUserId,
+            ),
+        ).toBe(false);
+    });
+
+    it("rejects duplicate email when creating users", async () => {
+        const { accessToken } = await loginAs(
+            testApp.app,
+            "admin@painel.com",
+            "123456",
+        );
+
+        const response = await request(testApp.app)
+            .post("/api/users")
+            .set("Authorization", bearer(accessToken))
+            .send({
+                fullName: "Outro Admin",
+                cpf: "44444444444",
+                email: "admin@painel.com",
+                password: "123456",
+                role: "ADMIN",
+            });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.body).toMatchObject({
+            message: "Este e-mail já está registrado",
+        });
+    });
+
+    it("blocks vendors from accessing the admin users area", async () => {
+        const { accessToken } = await loginAs(
+            testApp.app,
+            "joao@painel.com",
+            "123456",
+        );
+
+        const response = await request(testApp.app)
+            .get("/api/users")
+            .set("Authorization", bearer(accessToken));
+
+        expect(response.statusCode).toBe(403);
+        expect(response.body).toMatchObject({
+            message: "Acesso negado",
+        });
     });
 });
