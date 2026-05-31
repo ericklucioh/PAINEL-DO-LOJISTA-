@@ -1,34 +1,53 @@
-import request from "supertest";
 import { describe, expect, it } from "vitest";
-import { createTestApp } from "../../helpers/create-test-app";
-import {
-    closeTestServer,
-    createTestServer,
-} from "../../helpers/create-test-server";
 import {
     createUsersControllerMock,
     createProductsControllerMock,
 } from "../../helpers/controllers";
-import { buildAccessToken } from "../../helpers/auth-token";
+import { createProductsRouter } from "../../../src/modules/products/products.routes";
 
 describe("products routes", () => {
-    it("GET /api/products returns hello world for authenticated user", async () => {
-        const app = createTestApp({
-            usersController: createUsersControllerMock(),
-            productsController: createProductsControllerMock(),
+    it("registers protected product routes", () => {
+        const router = createProductsRouter({
+            controller: createProductsControllerMock(),
         });
-        const token = buildAccessToken({ role: "ADMIN" });
-        const server = await createTestServer(app);
 
-        try {
-            const response = await request(server)
-                .get("/api/products")
-                .set("Authorization", `Bearer ${token}`);
+        const routes = router.stack
+            .filter((layer) => layer.route !== undefined)
+            .map((layer) => ({
+                path: layer.route?.path,
+                methods: Object.keys(layer.route?.methods ?? {}),
+                stack: layer.route?.stack.map((routeLayer) => routeLayer.name),
+            }));
 
-            expect(response.status).toBe(200);
-            expect(response.body).toEqual({ hello: "world" });
-        } finally {
-            await closeTestServer(server);
-        }
+        expect(routes).toHaveLength(5);
+        expect(routes).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    path: "/",
+                    methods: ["get"],
+                    stack: expect.arrayContaining(["verifyToken", "Mock"]),
+                }),
+                expect.objectContaining({
+                    path: "/by-ean/:ean",
+                    methods: ["get"],
+                    stack: expect.arrayContaining(["verifyToken", "Mock"]),
+                }),
+                expect.objectContaining({
+                    path: "/",
+                    methods: ["post"],
+                    stack: expect.arrayContaining(["verifyToken", "Mock"]),
+                }),
+                expect.objectContaining({
+                    path: "/:id",
+                    methods: ["put"],
+                    stack: expect.arrayContaining(["verifyToken", "Mock"]),
+                }),
+                expect.objectContaining({
+                    path: "/:id/deactivate",
+                    methods: ["patch"],
+                    stack: expect.arrayContaining(["verifyToken", "Mock"]),
+                }),
+            ]),
+        );
     });
 });
