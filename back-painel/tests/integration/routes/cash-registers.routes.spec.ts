@@ -1,52 +1,40 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createTestModules } from "../../helpers/test-modules";
-import { invokeRouterRoute } from "../../helpers/route-invoker";
-import { buildAccessToken } from "../../helpers/auth-token";
-import { OpenCashRegisterResponseSchema } from "../../../src/modules/cash-registers/cash-registers.schema";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import request from "supertest";
+import { createTestApp } from "../../helpers/create-test-app";
+import { resetTestDatabase } from "../../helpers/test-database";
+import { loginAs, bearer } from "../../helpers/test-http";
 
-let modules: ReturnType<typeof createTestModules>;
+let testApp: ReturnType<typeof createTestApp>;
 
 describe("cash-registers routes", () => {
-    beforeAll(() => {
-        modules = createTestModules();
+    beforeEach(() => {
+        resetTestDatabase();
+        testApp = createTestApp();
     });
 
-    afterAll(async () => {
-        await modules.close();
+    afterEach(async () => {
+        await testApp.close();
     });
 
-    it("opens a cash register with the official controller contract", async () => {
-        const headers = {
-            authorization: `Bearer ${buildAccessToken({
-                role: "VENDEDOR",
-                sub: "user_vendor_1",
-                nome: "Joao Vendedor",
-            })}`,
-        };
+    it("opens a cash register for the seller flow", async () => {
+        const vendor = await loginAs(testApp.app, "joao@painel.com", "123456");
 
-        const response = await invokeRouterRoute(
-            modules.cashRegistersRouter,
-            "POST",
-            "/open",
-            {
-                headers,
-                body: {
-                    initialBalance: 150,
-                    note: "Abertura do PDV",
-                },
-            },
-        );
+        const response = await request(testApp.app)
+            .post("/api/cash-registers/open")
+            .set("Authorization", bearer(vendor.accessToken))
+            .send({
+                saldo_inicial: 150,
+                observacao: "Abertura do PDV",
+            });
 
         expect(response.statusCode).toBe(201);
-        expect(OpenCashRegisterResponseSchema.parse(response.body)).toMatchObject(
-            {
-                cashRegister: {
-                    openedByUserId: "user_vendor_1",
-                    activeOpenedByUserId: "user_vendor_1",
-                    initialBalance: 150,
-                    status: "ABERTO",
-                },
+        expect(response.body).toMatchObject({
+            cashRegister: {
+                openedByUserId: "user_vendor_1",
+                activeOpenedByUserId: "user_vendor_1",
+                initialBalance: 150,
+                status: "ABERTO",
             },
-        );
+        });
     });
 });

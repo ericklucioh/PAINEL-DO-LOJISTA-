@@ -1,127 +1,125 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createTestModules } from "../../helpers/test-modules";
-import { invokeRouterRoute } from "../../helpers/route-invoker";
-import { buildAccessToken } from "../../helpers/auth-token";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import request from "supertest";
+import { createTestApp } from "../../helpers/create-test-app";
 import { resetTestDatabase } from "../../helpers/test-database";
+import { loginAs, bearer } from "../../helpers/test-http";
 
-let modules: ReturnType<typeof createTestModules>;
+let testApp: ReturnType<typeof createTestApp>;
 
 describe("products routes", () => {
-    beforeAll(() => {
+    beforeEach(() => {
         resetTestDatabase();
-        modules = createTestModules();
+        testApp = createTestApp();
     });
 
-    afterAll(async () => {
-        await modules.close();
+    afterEach(async () => {
+        await testApp.close();
     });
 
-    it("runs the real products flow with sqlite", async () => {
-        const adminHeaders = {
-            authorization: `Bearer ${buildAccessToken({ role: "ADMIN" })}`,
-        };
-        const vendorHeaders = {
-            authorization: `Bearer ${buildAccessToken({ role: "VENDEDOR" })}`,
-        };
+    it("covers the happy path product flows", async () => {
+        const admin = await loginAs(testApp.app, "admin@painel.com", "123456");
+        const vendor = await loginAs(testApp.app, "joao@painel.com", "123456");
 
-        const listResponse = await invokeRouterRoute(
-            modules.productsRouter,
-            "GET",
-            "/",
-            {
-                headers: adminHeaders,
-                query: {
-                    page: 1,
-                    search: "cola",
-                },
-            },
-        );
+        const listResponse = await request(testApp.app)
+            .get("/api/products")
+            .set("Authorization", bearer(admin.accessToken))
+            .query({ page: 1, search: "cola" })
+            .expect(200);
 
-        expect(listResponse.statusCode).toBe(200);
         expect(listResponse.body).toMatchObject({
+            page: 1,
+            pageSize: 10,
             search: "cola",
-            totalItems: expect.any(Number),
-            data: expect.arrayContaining([
+            totalItems: 1,
+            totalPages: 1,
+            data: [
                 expect.objectContaining({
                     id: "prod_001",
+                    ean: "7891000100015",
+                    name: "Refrigerante Cola 2L",
+                    price: 12.9,
                     stockCurrent: 18,
+                    isCritical: false,
+                    isActive: true,
                 }),
-            ]),
+            ],
         });
 
-        const byEanResponse = await invokeRouterRoute(
-            modules.productsRouter,
-            "GET",
-            "/by-ean/7891000100022",
-            { headers: vendorHeaders },
-        );
+        const byEanResponse = await request(testApp.app)
+            .get("/api/products/by-ean/7891000100022")
+            .set("Authorization", bearer(vendor.accessToken))
+            .expect(200);
 
-        expect(byEanResponse.statusCode).toBe(200);
         expect(byEanResponse.body).toMatchObject({
             id: "prod_002",
             ean: "7891000100022",
+            name: "Arroz 5kg",
+            price: 29.9,
             stockCurrent: 7,
+            isActive: true,
         });
 
-        const createResponse = await invokeRouterRoute(
-            modules.productsRouter,
-            "POST",
-            "/",
-            {
-                headers: adminHeaders,
-                body: {
-                    ean: "7891000100099",
-                    name: "Produto Novo",
-                    price: 14.5,
-                    minStock: 3,
-                    maxStock: 20,
-                },
-            },
-        );
+        const createResponse = await request(testApp.app)
+            .post("/api/products")
+            .set("Authorization", bearer(admin.accessToken))
+            .send({
+                ean: "7891000100099",
+                name: "Produto Novo",
+                price: 14.5,
+                minStock: 3,
+                maxStock: 20,
+            })
+            .expect(201);
 
-        expect(createResponse.statusCode).toBe(201);
         expect(createResponse.body).toMatchObject({
             product: {
                 ean: "7891000100099",
                 name: "Produto Novo",
+                price: 14.5,
+                minStock: 3,
+                maxStock: 20,
                 deletedAt: null,
+                isActive: true,
             },
         });
 
-        const updateResponse = await invokeRouterRoute(
-            modules.productsRouter,
-            "PUT",
-            "/prod_001",
-            {
-                headers: adminHeaders,
-                body: {
-                    name: "Refrigerante Cola 2L Atualizado",
-                },
-            },
-        );
+        const createdProductId = createResponse.body.product.id as string;
 
-        expect(updateResponse.statusCode).toBe(200);
+        const updateResponse = await request(testApp.app)
+            .put(`/api/products/${createdProductId}`)
+            .set("Authorization", bearer(admin.accessToken))
+            .send({
+                name: "Produto Novo Atualizado",
+                price: 19.5,
+            })
+            .expect(200);
+
         expect(updateResponse.body).toMatchObject({
             product: {
-                id: "prod_001",
-                name: "Refrigerante Cola 2L Atualizado",
+                id: createdProductId,
+                name: "Produto Novo Atualizado",
+                price: 19.5,
             },
         });
 
-        const deactivateResponse = await invokeRouterRoute(
-            modules.productsRouter,
-            "PATCH",
-            "/prod_004/deactivate",
-            { headers: adminHeaders },
-        );
+        const deactivateResponse = await request(testApp.app)
+            .patch(`/api/products/${createdProductId}/deactivate`)
+            .set("Authorization", bearer(admin.accessToken))
+            .expect(200);
 
-        expect(deactivateResponse.statusCode).toBe(200);
         expect(deactivateResponse.body).toMatchObject({
             success: true,
             product: {
-                id: "prod_004",
+                id: createdProductId,
                 deletedAt: expect.any(String),
             },
         });
+
+        const persistedProduct = await testApp.prisma.product.findUnique({
+            where: { id: createdProductId },
+        });
+        expect(persistedProduct).not.toBeNull();
+        expect(persistedProduct?.deletedAt).not.toBeNull();
+        expect(persistedProduct?.deactivatedAt).not.toBeNull();
     });
 });

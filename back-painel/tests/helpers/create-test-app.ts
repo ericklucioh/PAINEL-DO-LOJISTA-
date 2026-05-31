@@ -4,6 +4,7 @@ import { createTestModules } from "./test-modules";
 
 export interface TestApp {
     app: Express;
+    prisma: ReturnType<typeof createTestModules>["prisma"];
     close(): Promise<void>;
 }
 
@@ -19,6 +20,7 @@ export function createTestApp(): TestApp {
             salesController: modules.salesController,
             cashRegistersController: modules.cashRegistersController,
         }),
+        prisma: modules.prisma,
         close: () => modules.close(),
     };
 }

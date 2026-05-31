@@ -1,101 +1,93 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createTestModules } from "../../helpers/test-modules";
-import { invokeRouterRoute } from "../../helpers/route-invoker";
-import { buildAccessToken } from "../../helpers/auth-token";
-import { StockMovementResponseSchema, StockHistoryResponseSchema } from "../../../src/modules/stock/stock.schema";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import request from "supertest";
+import { createTestApp } from "../../helpers/create-test-app";
+import { resetTestDatabase } from "../../helpers/test-database";
+import { loginAs, bearer } from "../../helpers/test-http";
 
-let modules: ReturnType<typeof createTestModules>;
+let testApp: ReturnType<typeof createTestApp>;
 
 describe("stock routes", () => {
-    beforeAll(() => {
-        modules = createTestModules();
+    beforeEach(() => {
+        resetTestDatabase();
+        testApp = createTestApp();
     });
 
-    afterAll(async () => {
-        await modules.close();
+    afterEach(async () => {
+        await testApp.close();
     });
 
-    it("records stock movements and returns history with the official controller contract", async () => {
-        const headers = {
-            authorization: `Bearer ${buildAccessToken({
-                role: "ADMIN",
-                sub: "user_admin_1",
-                nome: "Admin do Sistema",
-            })}`,
-        };
+    it("records incoming and outgoing stock movements and returns history", async () => {
+        const admin = await loginAs(testApp.app, "admin@painel.com", "123456");
 
-        const entryResponse = await invokeRouterRoute(
-            modules.stockRouter,
-            "POST",
-            "/entry",
-            {
-                headers,
-                body: {
-                    productId: "prod_001",
-                    quantity: 5,
-                    reason: "COMPRA",
-                    note: "Reposição",
-                },
-            },
-        );
+        const entryResponse = await request(testApp.app)
+            .post("/api/stock/entry")
+            .set("Authorization", bearer(admin.accessToken))
+            .send({
+                productId: "prod_001",
+                quantity: 5,
+                reason: "COMPRA",
+                note: "Reposição",
+            });
 
         expect(entryResponse.statusCode).toBe(201);
-        expect(StockMovementResponseSchema.parse(entryResponse.body)).toMatchObject({
+        expect(entryResponse.body).toMatchObject({
             movement: {
                 type: "ENTRY",
-                reason: "Reposição",
+                reason: "COMPRA",
                 quantity: 5,
-                balanceAfter: 5,
+                balanceAfter: 23,
             },
         });
 
-        const exitResponse = await invokeRouterRoute(
-            modules.stockRouter,
-            "POST",
-            "/exit",
-            {
-                headers,
-                body: {
-                    productId: "prod_001",
-                    quantity: 2,
-                    reason: "PERDA",
-                    note: "Avaria",
-                },
-            },
-        );
+        const exitResponse = await request(testApp.app)
+            .post("/api/stock/exit")
+            .set("Authorization", bearer(admin.accessToken))
+            .send({
+                productId: "prod_001",
+                quantity: 2,
+                reason: "PERDA",
+                note: "Avaria",
+            });
 
         expect(exitResponse.statusCode).toBe(201);
-        expect(StockMovementResponseSchema.parse(exitResponse.body)).toMatchObject({
+        expect(exitResponse.body).toMatchObject({
             movement: {
                 type: "EXIT",
-                reason: "Avaria",
+                reason: "PERDA",
                 quantity: 2,
-                balanceAfter: -2,
+                balanceAfter: 21,
             },
         });
 
-        const historyResponse = await invokeRouterRoute(
-            modules.stockRouter,
-            "GET",
-            "/history",
-            {
-                headers,
-                query: {
-                    produto_id: "prod_001",
-                },
-            },
-        );
+        const historyResponse = await request(testApp.app)
+            .get("/api/stock/history")
+            .set("Authorization", bearer(admin.accessToken))
+            .query({ produto_id: "prod_001" });
 
         expect(historyResponse.statusCode).toBe(200);
-        expect(
-            StockHistoryResponseSchema.parse(historyResponse.body),
-        ).toMatchObject({
+        expect(historyResponse.body).toMatchObject({
             product: {
                 id: "prod_001",
-                ean: "0000000000000",
-                name: "Produto de teste",
+                ean: "7891000100015",
+                name: "Refrigerante Cola 2L",
             },
-            data: [],
+            data: expect.arrayContaining([
+                expect.objectContaining({
+                    type: "ENTRY",
+                    quantity: 5,
+                    balanceAfter: 23,
+                }),
+                expect.objectContaining({
+                    type: "EXIT",
+                    quantity: 2,
+                    balanceAfter: 21,
+                }),
+            ]),
         });
+
+        const persistedMovements = await testApp.prisma.inventoryMovement.findMany({
+            where: { productId: "prod_001" },
+        });
+        expect(persistedMovements.length).toBeGreaterThanOrEqual(10);
     });
 });

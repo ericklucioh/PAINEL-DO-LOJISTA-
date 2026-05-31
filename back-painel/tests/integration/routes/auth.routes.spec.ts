@@ -1,61 +1,63 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createTestModules } from "../../helpers/test-modules";
-import { invokeRouterRoute } from "../../helpers/route-invoker";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import request from "supertest";
+import { createTestApp } from "../../helpers/create-test-app";
 import { resetTestDatabase } from "../../helpers/test-database";
 
-let modules: ReturnType<typeof createTestModules>;
+let testApp: ReturnType<typeof createTestApp>;
 
 describe("auth routes", () => {
-    beforeAll(() => {
+    beforeEach(() => {
         resetTestDatabase();
-        modules = createTestModules();
+        testApp = createTestApp();
     });
 
-    afterAll(async () => {
-        await modules.close();
+    afterEach(async () => {
+        await testApp.close();
     });
 
-    it("login and refresh with real controller and service", async () => {
-        const loginResponse = await invokeRouterRoute(
-            modules.authRouter,
-            "POST",
-            "/login",
-            {
-                body: {
-                    email: "admin@painel.com",
-                    password: "123456",
-                },
-            },
-        );
+    it("logs in with valid credentials and sets cookies", async () => {
+        const response = await request(testApp.app)
+            .post("/api/auth/login")
+            .send({
+                email: "admin@painel.com",
+                password: "123456",
+            });
 
-        expect(loginResponse.statusCode).toBe(200);
-        expect(loginResponse.body).toMatchObject({
+        expect(response.statusCode).toBe(200);
+        expect(response.body).toMatchObject({
+            accessToken: expect.any(String),
+            refreshToken: expect.any(String),
+            expiresIn: 900,
             user: {
                 id: "user_admin_1",
                 nome: "Admin do Sistema",
                 tipo: "ADMIN",
             },
         });
-        expect(loginResponse.cookies).toHaveLength(2);
+        expect(response.headers["set-cookie"]).toHaveLength(2);
+    });
 
-        const refreshToken = loginResponse.body as {
-            refreshToken: string;
-        };
+    it("refreshes the access token with a valid refresh token", async () => {
+        const loginResponse = await request(testApp.app)
+            .post("/api/auth/login")
+            .send({
+                email: "admin@painel.com",
+                password: "123456",
+            })
+            .expect(200);
 
-        const refreshResponse = await invokeRouterRoute(
-            modules.authRouter,
-            "POST",
-            "/refresh",
-            {
-                body: {
-                    refreshToken: refreshToken.refreshToken,
-                },
-            },
-        );
+        const refreshResponse = await request(testApp.app)
+            .post("/api/auth/refresh")
+            .send({
+                refreshToken: loginResponse.body.refreshToken,
+            });
 
         expect(refreshResponse.statusCode).toBe(200);
         expect(refreshResponse.body).toMatchObject({
+            accessToken: expect.any(String),
+            refreshToken: expect.any(String),
             expiresIn: 900,
         });
+        expect(refreshResponse.headers["set-cookie"]).toHaveLength(2);
     });
 });
