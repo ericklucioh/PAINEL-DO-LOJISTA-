@@ -1,11 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTestModules } from "../../helpers/test-modules";
 import { invokeRouterRoute } from "../../helpers/route-invoker";
+import { resetTestDatabase } from "../../helpers/test-database";
+
+let modules: ReturnType<typeof createTestModules>;
 
 describe("auth routes", () => {
-    it("login and refresh with real controller and service", async () => {
-        const modules = createTestModules();
+    beforeAll(() => {
+        resetTestDatabase();
+        modules = createTestModules();
+    });
 
+    afterAll(async () => {
+        await modules.close();
+    });
+
+    it("login and refresh with real controller and service", async () => {
         const loginResponse = await invokeRouterRoute(
             modules.authRouter,
             "POST",

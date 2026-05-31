@@ -1,12 +1,23 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTestModules } from "../../helpers/test-modules";
 import { invokeRouterRoute } from "../../helpers/route-invoker";
 import { verifyToken } from "../../../src/middlewares/verifyToken";
 import { buildAccessToken } from "../../helpers/auth-token";
+import { resetTestDatabase } from "../../helpers/test-database";
+
+let modules: ReturnType<typeof createTestModules>;
 
 describe("users routes", () => {
-    it("runs the real users flow with prisma mock", async () => {
-        const modules = createTestModules();
+    beforeAll(() => {
+        resetTestDatabase();
+        modules = createTestModules();
+    });
+
+    afterAll(async () => {
+        await modules.close();
+    });
+
+    it("runs the real users flow with sqlite", async () => {
         const headers = {
             authorization: `Bearer ${buildAccessToken({ role: "ADMIN" })}`,
         };
