@@ -2,7 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 import { ACCESS_TOKEN_COOKIE_NAME } from "@/lib/auth-config";
-import { getAuthUserFromPayload, verifyAccessToken } from "@/lib/auth-jwt";
+import { fetchCurrentUserOnBackend } from "@/lib/auth-backend";
 
 export type AuthSession = {
     id: string;
@@ -18,10 +18,10 @@ export async function getCurrentAuthSession(): Promise<AuthSession | null> {
         return null;
     }
 
-    const payload = await verifyAccessToken(accessToken);
-    if (!payload) {
+    const response = await fetchCurrentUserOnBackend(accessToken);
+    if (!response.ok || !response.data) {
         return null;
     }
 
-    return getAuthUserFromPayload(payload);
+    return response.data;
 }

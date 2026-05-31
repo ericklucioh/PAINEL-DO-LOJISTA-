@@ -1,17 +1,18 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { authService } from "@/services/auth.service";
 
 export function LogoutButton() {
     const router = useRouter();
 
     const handleLogout = async () => {
-        await fetch("/api/auth/logout", {
-            method: "POST",
-        });
-
-        router.replace("/login");
-        router.refresh();
+        try {
+            await authService.logout();
+        } finally {
+            router.replace("/login");
+            router.refresh();
+        }
     };
 
     return (

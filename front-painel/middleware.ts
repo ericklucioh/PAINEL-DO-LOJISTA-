@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fetchCurrentUserOnBackend, refreshOnBackend } from "@/lib/auth-backend";
+import {
+    clearAuthCookies,
+    setAuthCookies,
+} from "@/lib/auth-cookies";
 import {
     ACCESS_TOKEN_COOKIE_NAME,
-    ACCESS_TOKEN_MAX_AGE_SECONDS,
-    BACKEND_URL,
     REFRESH_TOKEN_COOKIE_NAME,
-    REFRESH_TOKEN_MAX_AGE_SECONDS,
 } from "@/lib/auth-config";
-import { getAuthUserFromPayload, verifyAccessToken } from "@/lib/auth-jwt";
+
+type AuthSession = {
+    id: string;
+    nome: string;
+    tipo: "ADMIN" | "VENDEDOR";
+};
+
+type ResolvedSession = {
+    session: AuthSession;
+    cookies?: {
+        accessToken: string;
+        refreshToken: string;
+    };
+} | null;
 
 function isProtectedPath(pathname: string): boolean {
     return (
@@ -23,179 +38,75 @@ function isAdminPath(pathname: string): boolean {
     return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
-function readCookieValue(
-    cookieHeader: string | null,
-    cookieName: string,
-): string | null {
-    if (!cookieHeader) {
+function serializeCookies(entries: Array<[string, string]>): string {
+    return entries.map(([name, value]) => `${name}=${encodeURIComponent(value)}`).join("; ");
+}
+
+function buildRequestHeaders(
+    request: NextRequest,
+    cookies: {
+        accessToken: string;
+        refreshToken: string;
+    },
+): Headers {
+    const headers = new Headers(request.headers);
+    const cookieMap = new Map(
+        request.cookies
+            .getAll()
+            .map((cookie) => [cookie.name, cookie.value] as [string, string]),
+    );
+
+    cookieMap.set(ACCESS_TOKEN_COOKIE_NAME, cookies.accessToken);
+    cookieMap.set(REFRESH_TOKEN_COOKIE_NAME, cookies.refreshToken);
+    headers.set("cookie", serializeCookies(Array.from(cookieMap.entries())));
+
+    return headers;
+}
+
+async function resolveSession(request: NextRequest): Promise<ResolvedSession> {
+    const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE_NAME)?.value;
+    if (accessToken) {
+        const currentUser = await fetchCurrentUserOnBackend(accessToken);
+        if (currentUser.ok && currentUser.data) {
+            return {
+                session: currentUser.data,
+            };
+        }
+    }
+
+    const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE_NAME)?.value;
+    if (!refreshToken) {
         return null;
     }
 
-    const entries = cookieHeader.split(";").map((entry) => entry.trim());
-    const match = entries.find((entry) => entry.startsWith(`${cookieName}=`));
-
-    if (!match) {
+    const refreshed = await refreshOnBackend(refreshToken);
+    if (!refreshed.ok || !refreshed.data) {
         return null;
     }
 
-    return match.slice(cookieName.length + 1);
-}
-
-function serializeCookies(cookies: Array<[string, string]>): string {
-    return cookies.map(([name, value]) => `${name}=${value}`).join("; ");
-}
-
-function applyAuthCookies(
-    response: NextResponse,
-    accessToken: string,
-    refreshToken: string,
-): void {
-    response.cookies.set(ACCESS_TOKEN_COOKIE_NAME, accessToken, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-        maxAge: ACCESS_TOKEN_MAX_AGE_SECONDS,
-    });
-
-    response.cookies.set(REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-        maxAge: REFRESH_TOKEN_MAX_AGE_SECONDS,
-    });
+    return {
+        session: refreshed.data.user,
+        cookies: {
+            accessToken: refreshed.data.accessToken,
+            refreshToken: refreshed.data.refreshToken,
+        },
+    };
 }
 
 function redirectWithCookies(
     url: URL,
-    cookiesData: {
+    cookies: {
         accessToken: string;
         refreshToken: string;
     } | null,
 ): NextResponse {
     const response = NextResponse.redirect(url);
 
-    if (cookiesData === null) {
-        return response;
+    if (cookies !== null) {
+        setAuthCookies(response, cookies.accessToken, cookies.refreshToken);
     }
-
-    applyAuthCookies(
-        response,
-        cookiesData.accessToken,
-        cookiesData.refreshToken,
-    );
 
     return response;
-}
-
-async function refreshSession(request: NextRequest): Promise<{
-    accessToken: string;
-    refreshToken: string;
-    session: {
-        id: string;
-        nome: string;
-        tipo: "ADMIN" | "VENDEDOR";
-    };
-} | null> {
-    const refreshToken = readCookieValue(
-        request.headers.get("cookie"),
-        REFRESH_TOKEN_COOKIE_NAME,
-    );
-
-    if (!refreshToken) {
-        return null;
-    }
-
-    const backendResponse = await fetch(`${BACKEND_URL}/api/auth/refresh`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            cookie: `${REFRESH_TOKEN_COOKIE_NAME}=${refreshToken}`,
-        },
-        body: JSON.stringify({}),
-    });
-
-    if (!backendResponse.ok) {
-        return null;
-    }
-
-    const body = (await backendResponse.json().catch(() => null)) as
-        | {
-              accessToken?: string;
-              refreshToken?: string;
-          }
-        | null;
-
-    if (!body?.accessToken || !body.refreshToken) {
-        return null;
-    }
-
-    const payload = await verifyAccessToken(body.accessToken);
-    if (!payload?.sub || !payload.nome || !payload.tipo) {
-        return null;
-    }
-
-    return {
-        accessToken: body.accessToken,
-        refreshToken: body.refreshToken,
-        session: getAuthUserFromPayload(payload),
-    };
-}
-
-async function resolveSession(
-    request: NextRequest,
-): Promise<
-    | {
-          session: {
-              id: string;
-              nome: string;
-              tipo: "ADMIN" | "VENDEDOR";
-          };
-          responseHeaders?: Headers;
-          cookies?: {
-              accessToken: string;
-              refreshToken: string;
-          };
-      }
-    | null
-> {
-    const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE_NAME)?.value;
-
-    if (accessToken) {
-        const payload = await verifyAccessToken(accessToken);
-        if (payload?.sub && payload.nome && payload.tipo) {
-            return {
-                session: getAuthUserFromPayload(payload),
-            };
-        }
-    }
-
-    const refreshed = await refreshSession(request);
-    if (!refreshed) {
-        return null;
-    }
-
-    const requestHeaders = new Headers(request.headers);
-    const cookieEntries = request.cookies
-        .getAll()
-        .map((cookie) => [cookie.name, cookie.value] as [string, string]);
-    const cookieMap = new Map(cookieEntries);
-    cookieMap.set(ACCESS_TOKEN_COOKIE_NAME, refreshed.accessToken);
-    cookieMap.set(REFRESH_TOKEN_COOKIE_NAME, refreshed.refreshToken);
-    requestHeaders.set(
-        "cookie",
-        serializeCookies(Array.from(cookieMap.entries())),
-    );
-
-    return {
-        session: refreshed.session,
-        responseHeaders: requestHeaders,
-        cookies: {
-            accessToken: refreshed.accessToken,
-            refreshToken: refreshed.refreshToken,
-        },
-    };
 }
 
 export async function middleware(request: NextRequest) {
@@ -203,7 +114,6 @@ export async function middleware(request: NextRequest) {
 
     if (pathname === "/login") {
         const currentSession = await resolveSession(request);
-
         if (currentSession !== null) {
             return redirectWithCookies(
                 new URL("/dashboard", request.url),
@@ -226,7 +136,9 @@ export async function middleware(request: NextRequest) {
             loginUrl.searchParams.set("next", nextPath);
         }
 
-        return NextResponse.redirect(loginUrl);
+        const response = NextResponse.redirect(loginUrl);
+        clearAuthCookies(response);
+        return response;
     }
 
     if (isAdminPath(pathname) && resolvedSession.session.tipo !== "ADMIN") {
@@ -238,14 +150,14 @@ export async function middleware(request: NextRequest) {
         );
     }
 
-    if (resolvedSession.responseHeaders && resolvedSession.cookies) {
+    if (resolvedSession.cookies) {
         const response = NextResponse.next({
             request: {
-                headers: resolvedSession.responseHeaders,
+                headers: buildRequestHeaders(request, resolvedSession.cookies),
             },
         });
 
-        applyAuthCookies(
+        setAuthCookies(
             response,
             resolvedSession.cookies.accessToken,
             resolvedSession.cookies.refreshToken,

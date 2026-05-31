@@ -1,43 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { BACKEND_URL, ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME, ACCESS_TOKEN_MAX_AGE_SECONDS, REFRESH_TOKEN_MAX_AGE_SECONDS } from "@/lib/auth-config";
+import { loginOnBackend } from "@/lib/auth-backend";
+import { setAuthCookies } from "@/lib/auth-cookies";
 
 const LoginBodySchema = z.object({
     email: z.string().email(),
     password: z.string().min(1),
 });
-
-type BackendLoginResponse = {
-    accessToken: string;
-    refreshToken: string;
-    expiresIn: number;
-    user: {
-        id: string;
-        nome: string;
-        tipo: "ADMIN" | "VENDEDOR";
-    };
-};
-
-function setAuthCookies(
-    response: NextResponse,
-    accessToken: string,
-    refreshToken: string,
-): void {
-    response.cookies.set(ACCESS_TOKEN_COOKIE_NAME, accessToken, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-        maxAge: ACCESS_TOKEN_MAX_AGE_SECONDS,
-    });
-    response.cookies.set(REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-        maxAge: REFRESH_TOKEN_MAX_AGE_SECONDS,
-    });
-}
 
 export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null);
@@ -50,44 +19,25 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    const backendResponse = await fetch(`${BACKEND_URL}/api/auth/login`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify(parsedBody.data),
-    });
+    const backendResponse = await loginOnBackend(parsedBody.data);
 
-    const responseBody = (await backendResponse
-        .json()
-        .catch(() => null)) as BackendLoginResponse | { message?: string } | null;
-
-    if (!backendResponse.ok) {
+    if (!backendResponse.ok || !backendResponse.data) {
         return NextResponse.json(
             {
-                message:
-                    (responseBody &&
-                        "message" in responseBody &&
-                        responseBody.message) ||
-                    "Não foi possível entrar no sistema.",
+                message: backendResponse.message,
             },
             { status: backendResponse.status },
         );
     }
 
-    const loginData = responseBody as BackendLoginResponse;
     const response = NextResponse.json(
         {
-            user: loginData.user,
+            user: backendResponse.data.user,
         },
         { status: 200 },
     );
 
-    setAuthCookies(
-        response,
-        loginData.accessToken,
-        loginData.refreshToken,
-    );
+    setAuthCookies(response, backendResponse.data.accessToken, backendResponse.data.refreshToken);
 
     return response;
 }
