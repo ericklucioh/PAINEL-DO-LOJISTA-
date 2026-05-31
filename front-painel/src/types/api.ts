@@ -22,6 +22,11 @@ export type AuthRefreshResponse = {
     accessToken: string;
     refreshToken: string;
     expiresIn: number;
+    user: AuthUser;
+};
+
+export type AuthMeResponse = {
+    user: AuthUser;
 };
 
 export type PaginatedResponse<T> = {

@@ -1,12 +1,17 @@
 import type { RequestHandler } from "express";
-import { env } from "../../config/env";
 import { asyncHandler } from "../../utils/asyncHandler";
-import { AuthLoginInputSchema, AuthRefreshInputSchema } from "./auth.schema";
+import {
+    AuthLoginInputSchema,
+    AuthLogoutInputSchema,
+    AuthRefreshInputSchema,
+} from "./auth.schema";
 import type { AuthService } from "./auth.service";
 
 export interface AuthController {
     login: RequestHandler;
     refresh: RequestHandler;
+    me: RequestHandler;
+    logout: RequestHandler;
 }
 
 export interface CreateAuthControllerDependencies {
@@ -23,24 +28,6 @@ function sendValidationError(
     });
 }
 
-function readCookieValue(
-    cookieHeader: string | undefined,
-    cookieName: string,
-): string | undefined {
-    if (cookieHeader === undefined || cookieHeader.trim().length === 0) {
-        return undefined;
-    }
-
-    const cookies = cookieHeader.split(";").map((part) => part.trim());
-    const match = cookies.find((part) => part.startsWith(`${cookieName}=`));
-
-    if (match === undefined) {
-        return undefined;
-    }
-
-    return decodeURIComponent(match.slice(cookieName.length + 1));
-}
-
 export function createAuthController({
     service,
 }: CreateAuthControllerDependencies): AuthController {
@@ -54,19 +41,6 @@ export function createAuthController({
 
             const response = await service.login(parsedBody.data);
 
-            res.cookie(env.accessTokenCookieName, response.accessToken, {
-                httpOnly: true,
-                sameSite: "lax",
-                secure: env.nodeEnv === "production",
-                maxAge: 15 * 60 * 1000,
-            });
-            res.cookie(env.authCookieName, response.refreshToken, {
-                httpOnly: true,
-                sameSite: "lax",
-                secure: env.nodeEnv === "production",
-                maxAge: 7 * 24 * 60 * 60 * 1000,
-            });
-
             res.status(200).json(response);
         }),
 
@@ -77,36 +51,38 @@ export function createAuthController({
                 return;
             }
 
-            const refreshTokenFromBody = parsedBody.data.refreshToken;
-            const refreshTokenFromCookie = readCookieValue(
-                req.headers.cookie,
-                env.authCookieName,
-            );
-            const refreshToken = refreshTokenFromBody ?? refreshTokenFromCookie;
+            const response = await service.refresh(parsedBody.data.refreshToken);
 
-            if (refreshToken === undefined) {
+            res.status(200).json(response);
+        }),
+
+        me: asyncHandler(async (req, res) => {
+            if (!req.authUser) {
                 res.status(401).json({
-                    message: "Refresh token ausente",
+                    message: "Token ausente",
                 });
                 return;
             }
 
-            const response = await service.refresh(refreshToken);
-
-            res.cookie(env.accessTokenCookieName, response.accessToken, {
-                httpOnly: true,
-                sameSite: "lax",
-                secure: env.nodeEnv === "production",
-                maxAge: 15 * 60 * 1000,
+            res.status(200).json({
+                user: {
+                    id: req.authUser.sub ?? "",
+                    nome: req.authUser.nome ?? "",
+                    tipo: req.authUser.tipo,
+                },
             });
-            res.cookie(env.authCookieName, response.refreshToken, {
-                httpOnly: true,
-                sameSite: "lax",
-                secure: env.nodeEnv === "production",
-                maxAge: 7 * 24 * 60 * 60 * 1000,
-            });
+        }),
 
-            res.status(200).json(response);
+        logout: asyncHandler(async (req, res) => {
+            const parsedBody = AuthLogoutInputSchema.safeParse(req.body ?? {});
+            if (!parsedBody.success) {
+                sendValidationError(res, parsedBody.error.issues);
+                return;
+            }
+
+            await service.logout(parsedBody.data.refreshToken);
+
+            res.status(200).json({ ok: true });
         }),
     };
 }
