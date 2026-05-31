@@ -29,6 +29,7 @@ type AuthUserRecord = {
 export interface AuthService {
     login(input: AuthLoginInput): Promise<AuthLoginResponse>;
     refresh(refreshToken: string): Promise<AuthRefreshResponse>;
+    logout(refreshToken: string): Promise<void>;
 }
 
 export interface CreateAuthServiceDependencies {
@@ -147,7 +148,16 @@ export function createAuthService({
                 accessToken: nextAccessToken,
                 refreshToken: nextRefreshToken,
                 expiresIn: 900,
+                user: toAuthUser(account),
             };
+        },
+
+        async logout(refreshToken) {
+            if (refreshToken.trim().length === 0) {
+                throw createHttpError("Refresh token ausente", 401);
+            }
+
+            refreshTokenStore.delete(refreshToken);
         },
     };
 }

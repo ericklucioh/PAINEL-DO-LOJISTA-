@@ -19,13 +19,18 @@ export const AuthLoginResponseSchema = z.object({
 });
 
 export const AuthRefreshInputSchema = z.object({
-    refreshToken: z.string().min(1).optional(),
+    refreshToken: z.string().min(1),
 });
 
 export const AuthRefreshResponseSchema = z.object({
     accessToken: z.string(),
     refreshToken: z.string(),
     expiresIn: z.number().int().positive(),
+    user: AuthUserSchema,
+});
+
+export const AuthLogoutInputSchema = z.object({
+    refreshToken: z.string().min(1),
 });
 
 export type AuthUser = z.infer<typeof AuthUserSchema>;
@@ -33,3 +38,4 @@ export type AuthLoginInput = z.infer<typeof AuthLoginInputSchema>;
 export type AuthLoginResponse = z.infer<typeof AuthLoginResponseSchema>;
 export type AuthRefreshInput = z.infer<typeof AuthRefreshInputSchema>;
 export type AuthRefreshResponse = z.infer<typeof AuthRefreshResponseSchema>;
+export type AuthLogoutInput = z.infer<typeof AuthLogoutInputSchema>;
