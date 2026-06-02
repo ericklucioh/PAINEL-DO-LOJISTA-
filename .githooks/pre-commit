@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root=$(git rev-parse --show-toplevel)
+
+back_painel_files=()
+front_painel_files=()
+generic_files=()
+
+while IFS= read -r -d '' file; do
+	case "$file" in
+		back-painel/*)
+			back_painel_files+=("${file#back-painel/}")
+			;;
+		front-painel/*)
+			front_painel_files+=("${file#front-painel/}")
+			;;
+		*.md|*.mdx|*.json|*.jsonc|*.yaml|*.yml|*.js|*.jsx|*.ts|*.tsx|*.cjs|*.mjs|*.css|*.scss|*.html|*.graphql|*.gql|*.toml|*.xml|*.sql)
+			generic_files+=("$file")
+			;;
+	esac
+done < <(git diff --cached --name-only -z --diff-filter=ACMR)
+
+format_files() {
+	local root="$1"
+	shift
+
+	local -a files=("$@")
+	local prettier_bin="$repo_root/back-painel/node_modules/.bin/prettier"
+
+	if (( ${#files[@]} == 0 )); then
+		return 0
+	fi
+
+	if [[ ! -x "$prettier_bin" ]]; then
+		echo "prettier not found in back-painel. Run npm install there before committing." >&2
+		exit 1
+	fi
+
+	local -a paths=()
+	local file
+	for file in "${files[@]}"; do
+		paths+=("$root/$file")
+	done
+
+	(cd "$repo_root" && "$prettier_bin" --write -- "${paths[@]}")
+
+	local -a staged_paths=()
+	for file in "${files[@]}"; do
+		staged_paths+=("$root/$file")
+	done
+
+	git add -- "${staged_paths[@]}"
+}
+
+format_generic_files() {
+	local -a files=("$@")
+	local prettier_bin="$repo_root/back-painel/node_modules/.bin/prettier"
+
+	if (( ${#files[@]} == 0 )); then
+		return 0
+	fi
+
+	if [[ ! -x "$prettier_bin" ]]; then
+		echo "prettier not found in back-painel. Run npm install there before committing." >&2
+		exit 1
+	fi
+
+	(cd "$repo_root" && "$prettier_bin" --write -- "${files[@]}")
+	git add -- "${files[@]}"
+}
+
+format_files "back-painel" "${back_painel_files[@]}"
+format_files "front-painel" "${front_painel_files[@]}"
+format_generic_files "${generic_files[@]}"

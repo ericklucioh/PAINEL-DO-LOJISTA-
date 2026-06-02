@@ -143,7 +143,7 @@ export function createAuthService({
                 throw createHttpError("Refresh token ausente", 401);
             }
 
-            refreshTokenStore.delete(refreshToken);
+            return;
         },
     };
 }

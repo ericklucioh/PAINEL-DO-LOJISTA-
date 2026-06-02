@@ -3,8 +3,10 @@ SHELL := /bin/bash
 COMPOSE ?= docker compose
 BACKEND_DIR := back-painel
 FRONTEND_DIR := front-painel
+PRETTIER := $(BACKEND_DIR)/node_modules/.bin/prettier
+FORMAT_DIRS := $(BACKEND_DIR) $(FRONTEND_DIR)
 
-.PHONY: run-dev down-dev format format-check test
+.PHONY: run-dev down-dev format format-check setup-hooks test
 
 run-dev:
 	@$(COMPOSE) up --build --remove-orphans
@@ -14,13 +16,27 @@ down-dev:
 
 format:
 	@set -e; \
-	( cd $(BACKEND_DIR) && npm run format ); \
-	( cd $(FRONTEND_DIR) && npm run format )
+	if [ ! -x "$(PRETTIER)" ]; then \
+		echo "prettier not found at $(PRETTIER). Run npm install in $(BACKEND_DIR) first." >&2; \
+		exit 1; \
+	fi; \
+	for dir in $(FORMAT_DIRS); do \
+		"$(PRETTIER)" --write -- $$dir; \
+	done
 
 format-check:
 	@set -e; \
-	( cd $(BACKEND_DIR) && npm run format:check ); \
-	( cd $(FRONTEND_DIR) && npm run format:check )
+	if [ ! -x "$(PRETTIER)" ]; then \
+		echo "prettier not found at $(PRETTIER). Run npm install in $(BACKEND_DIR) first." >&2; \
+		exit 1; \
+	fi; \
+	for dir in $(FORMAT_DIRS); do \
+		"$(PRETTIER)" --check -- $$dir; \
+	done
+
+setup-hooks:
+	@git config --local core.hooksPath .githooks
+	@chmod +x .githooks/pre-commit
 
 test:
 	@set -e; \

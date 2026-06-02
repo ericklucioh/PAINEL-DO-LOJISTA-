@@ -23,16 +23,34 @@ function parseMysqlUrl(databaseUrl: string): {
     }
 
     const database = url.pathname.replace(/^\/+/, "") || undefined;
-
-    return {
+    const connectionOptions: {
+        host: string;
+        port?: number;
+        user?: string;
+        password?: string;
+        database?: string;
+        allowPublicKeyRetrieval: boolean;
+        connectTimeout: number;
+    } = {
         host: url.hostname,
-        port: url.port ? Number(url.port) : undefined,
-        user: url.username || undefined,
-        password: url.password || undefined,
-        database,
         allowPublicKeyRetrieval: true,
         connectTimeout: 10000,
     };
+
+    if (url.port) {
+        connectionOptions.port = Number(url.port);
+    }
+    if (url.username) {
+        connectionOptions.user = url.username;
+    }
+    if (url.password) {
+        connectionOptions.password = url.password;
+    }
+    if (database) {
+        connectionOptions.database = database;
+    }
+
+    return connectionOptions;
 }
 
 export function getPrisma(): PrismaClient {
