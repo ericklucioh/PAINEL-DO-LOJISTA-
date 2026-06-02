@@ -140,4 +140,62 @@ describe("stock routes", () => {
             },
         });
     });
+
+    it("records a return entry with a different reason", async () => {
+        const admin = await loginAs(testApp.app, "admin@painel.com", "123456");
+
+        const response = await request(testApp.app)
+            .post("/api/stock/entry")
+            .set("Authorization", bearer(admin.accessToken))
+            .send({
+                productId: "prod_002",
+                type: "DEVOLUCAO",
+                quantity: 3,
+                note: "Troca do fornecedor",
+            });
+
+        expect(response.statusCode).toBe(201);
+        expect(response.body).toMatchObject({
+            stockCurrent: 10,
+            movement: {
+                productId: "prod_002",
+                productName: "Arroz 5kg",
+                type: "ENTRY",
+                reason: "Troca do fornecedor",
+                quantity: 3,
+                balanceBefore: 7,
+                balanceAfter: 10,
+                note: "Troca do fornecedor",
+            },
+        });
+    });
+
+    it("records an exit with damaged goods", async () => {
+        const admin = await loginAs(testApp.app, "admin@painel.com", "123456");
+
+        const response = await request(testApp.app)
+            .post("/api/stock/exit")
+            .set("Authorization", bearer(admin.accessToken))
+            .send({
+                productId: "prod_004",
+                type: "DANIFICADO",
+                quantity: 2,
+                note: "Baixa por dano",
+            });
+
+        expect(response.statusCode).toBe(201);
+        expect(response.body).toMatchObject({
+            stockCurrent: 2,
+            movement: {
+                productId: "prod_004",
+                productName: "Leite Integral 1L",
+                type: "EXIT",
+                reason: "Baixa por dano",
+                quantity: 2,
+                balanceBefore: 4,
+                balanceAfter: 2,
+                note: "Baixa por dano",
+            },
+        });
+    });
 });

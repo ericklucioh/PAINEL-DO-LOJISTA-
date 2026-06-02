@@ -121,4 +121,122 @@ describe("sales routes", () => {
         );
         expect(persistedSale?.cashMovements.length).toBeGreaterThanOrEqual(1);
     });
+
+    it("creates a sale with a single item and no discount", async () => {
+        const vendor = await loginAs(testApp.app, "joao@painel.com", "123456");
+
+        const openResponse = await request(testApp.app)
+            .post("/api/cash-registers/open")
+            .set("Authorization", bearer(vendor.accessToken))
+            .send({
+                initialBalance: 120,
+                note: "Abertura simples",
+            });
+
+        expect(openResponse.statusCode).toBe(201);
+
+        const saleResponse = await request(testApp.app)
+            .post("/api/sales")
+            .set("Authorization", bearer(vendor.accessToken))
+            .send({
+                cashRegisterId: openResponse.body.cashRegister.id,
+                discountAmount: 0,
+                paymentMethod: "DINHEIRO",
+                items: [{ productId: "prod_003", quantity: 1 }],
+            });
+
+        expect(saleResponse.statusCode).toBe(201);
+        expect(saleResponse.body).toMatchObject({
+            sale: {
+                cashRegisterId: openResponse.body.cashRegister.id,
+                soldByUserId: "user_vendor_1",
+                soldByUserName: "Joao Vendedor",
+                receiptNumber: "002",
+                subtotal: 8.5,
+                discountAmount: 0,
+                totalAmount: 8.5,
+                paymentMethod: "DINHEIRO",
+                status: "CONFIRMED",
+                items: [
+                    expect.objectContaining({
+                        productId: "prod_003",
+                        productNameSnapshot: "Feijao Carioca 1kg",
+                        productEanSnapshot: "7891000100039",
+                        quantity: 1,
+                        unitPriceSnapshot: 8.5,
+                        subtotal: 8.5,
+                    }),
+                ],
+            },
+        });
+    });
+
+    it("creates a sale with three items and a discount", async () => {
+        const vendor = await loginAs(testApp.app, "joao@painel.com", "123456");
+
+        const openResponse = await request(testApp.app)
+            .post("/api/cash-registers/open")
+            .set("Authorization", bearer(vendor.accessToken))
+            .send({
+                initialBalance: 300,
+                note: "Abertura para venda variada",
+            });
+
+        expect(openResponse.statusCode).toBe(201);
+
+        const saleResponse = await request(testApp.app)
+            .post("/api/sales")
+            .set("Authorization", bearer(vendor.accessToken))
+            .send({
+                cashRegisterId: openResponse.body.cashRegister.id,
+                discountAmount: 3.5,
+                paymentMethod: "DINHEIRO",
+                items: [
+                    { productId: "prod_001", quantity: 1 },
+                    { productId: "prod_002", quantity: 1 },
+                    { productId: "prod_004", quantity: 1 },
+                ],
+            });
+
+        expect(saleResponse.statusCode).toBe(201);
+        expect(saleResponse.body).toMatchObject({
+            sale: {
+                cashRegisterId: openResponse.body.cashRegister.id,
+                soldByUserId: "user_vendor_1",
+                soldByUserName: "Joao Vendedor",
+                receiptNumber: "002",
+                subtotal: 48.79,
+                discountAmount: 3.5,
+                totalAmount: 45.29,
+                paymentMethod: "DINHEIRO",
+                status: "CONFIRMED",
+                items: expect.arrayContaining([
+                    expect.objectContaining({
+                        productId: "prod_001",
+                        productNameSnapshot: "Refrigerante Cola 2L",
+                        productEanSnapshot: "7891000100015",
+                        quantity: 1,
+                        unitPriceSnapshot: 12.9,
+                        subtotal: 12.9,
+                    }),
+                    expect.objectContaining({
+                        productId: "prod_002",
+                        productNameSnapshot: "Arroz 5kg",
+                        productEanSnapshot: "7891000100022",
+                        quantity: 1,
+                        unitPriceSnapshot: 29.9,
+                        subtotal: 29.9,
+                    }),
+                    expect.objectContaining({
+                        productId: "prod_004",
+                        productNameSnapshot: "Leite Integral 1L",
+                        productEanSnapshot: "7891000100046",
+                        quantity: 1,
+                        unitPriceSnapshot: 5.99,
+                        subtotal: 5.99,
+                    }),
+                ]),
+            },
+        });
+    });
 });

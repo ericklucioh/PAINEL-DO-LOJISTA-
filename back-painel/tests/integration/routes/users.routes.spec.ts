@@ -123,4 +123,102 @@ describe("users routes", () => {
             ),
         ).toBe(false);
     });
+
+    it("lists users using a search filter", async () => {
+        const { accessToken } = await loginAs(
+            testApp.app,
+            "admin@painel.com",
+            "123456",
+        );
+
+        const response = await request(testApp.app)
+            .get("/api/users")
+            .set("Authorization", bearer(accessToken))
+            .query({ page: 1, search: "Joao" })
+            .expect(200);
+
+        expect(response.body).toMatchObject({
+            page: 1,
+            pageSize: 10,
+            search: "Joao",
+            totalItems: 1,
+            totalPages: 1,
+            data: [
+                expect.objectContaining({
+                    id: "user_vendor_1",
+                    fullName: "Joao Vendedor",
+                    email: "joao@painel.com",
+                    role: "VENDEDOR",
+                    isActive: true,
+                }),
+            ],
+        });
+    });
+
+    it("creates an admin user", async () => {
+        const { accessToken } = await loginAs(
+            testApp.app,
+            "admin@painel.com",
+            "123456",
+        );
+
+        const response = await request(testApp.app)
+            .post("/api/users")
+            .set("Authorization", bearer(accessToken))
+            .send({
+                fullName: "Admin Secundario",
+                cpf: "33333333333",
+                email: "admin2@painel.com",
+                password: "123456",
+                role: "ADMIN",
+            })
+            .expect(201);
+
+        expect(response.body).toMatchObject({
+            user: {
+                fullName: "Admin Secundario",
+                email: "admin2@painel.com",
+                role: "ADMIN",
+                deletedAt: null,
+            },
+        });
+    });
+
+    it("updates only the user name", async () => {
+        const { accessToken } = await loginAs(
+            testApp.app,
+            "admin@painel.com",
+            "123456",
+        );
+
+        const createResponse = await request(testApp.app)
+            .post("/api/users")
+            .set("Authorization", bearer(accessToken))
+            .send({
+                fullName: "Usuario Temporario",
+                cpf: "44444444444",
+                email: "temporario@painel.com",
+                password: "123456",
+                role: "VENDEDOR",
+            })
+            .expect(201);
+
+        const userId = createResponse.body.user.id as string;
+
+        const updateResponse = await request(testApp.app)
+            .put(`/api/users/${userId}`)
+            .set("Authorization", bearer(accessToken))
+            .send({
+                fullName: "Usuario Renomeado",
+            })
+            .expect(200);
+
+        expect(updateResponse.body).toMatchObject({
+            user: {
+                id: userId,
+                fullName: "Usuario Renomeado",
+                role: "VENDEDOR",
+            },
+        });
+    });
 });
