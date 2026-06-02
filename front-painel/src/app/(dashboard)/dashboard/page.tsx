@@ -23,16 +23,18 @@ const sections = [
     },
 ];
 
-export default function DashboardHomePage({
+export default async function DashboardHomePage({
     searchParams,
 }: {
-    searchParams?: {
+    searchParams?: Promise<{
         accessDenied?: string;
-    };
+    }>;
 }) {
+    const params = searchParams ? await searchParams : null;
+
     return (
         <div className="space-y-6">
-            {searchParams?.accessDenied === "1" ? (
+            {params?.accessDenied === "1" ? (
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                     Acesso negado.
                 </div>
