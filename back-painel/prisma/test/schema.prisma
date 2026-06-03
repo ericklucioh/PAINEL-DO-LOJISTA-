@@ -1,183 +1,184 @@
 generator client {
-  provider   = "prisma-client-js"
-  output     = "../../generated/test-client"
-  engineType = "binary"
+    provider   = "prisma-client-js"
+    output     = "../../generated/test-client"
+    engineType = "binary"
 }
 
 datasource db {
-  provider = "sqlite"
+    provider = "sqlite"
 }
 
 enum Role {
-  ADMIN
-  VENDEDOR
+    ADMIN
+    VENDEDOR
 }
 
 model User {
-  id                   String              @id @default(cuid())
-  fullName             String
-  cpf                  String              @unique
-  email                String              @unique
-  passwordHash         String
-  role                 Role
-  deactivatedAt        DateTime?
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
-  deletedAt            DateTime?
+    id            String    @id @default(cuid())
+    fullName      String
+    cpf           String    @unique
+    email         String    @unique
+    passwordHash  String
+    role          Role
+    deactivatedAt DateTime?
+    createdAt     DateTime  @default(now())
+    updatedAt     DateTime  @updatedAt
+    deletedAt     DateTime?
 
-  inventoryMovements   InventoryMovement[]
-  openedCashRegisters  CashRegister[]
-  cashMovementsCreated CashMovement[]
-  salesSold            Sale[]
+    inventoryMovements   InventoryMovement[]
+    openedCashRegisters  CashRegister[]
+    cashMovementsCreated CashMovement[]
+    salesSold            Sale[]
 }
 
 model Product {
-  id                  String             @id @default(cuid())
-  ean                 String             @unique
-  name                String
-  salePrice           Decimal
-  minStock            Int
-  maxStock            Int
-  deactivatedAt       DateTime?
-  deletedAt           DateTime?
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
+    id            String    @id @default(cuid())
+    ean           String    @unique
+    name          String
+    salePrice     Decimal
+    minStock      Int
+    maxStock      Int
+    deactivatedAt DateTime?
+    deletedAt     DateTime?
+    createdAt     DateTime  @default(now())
+    updatedAt     DateTime  @updatedAt
 
-  inventoryMovements  InventoryMovement[]
-  saleItems           SaleItem[]
+    inventoryMovements InventoryMovement[]
+    saleItems          SaleItem[]
 }
 
 enum InventoryMovementType {
-  COMPRA
-  DEVOLUCAO
-  DANIFICADO
-  PERDA
-  VENDA
-  AJUSTE_ENTRADA
-  AJUSTE_SAIDA
+    COMPRA
+    DEVOLUCAO
+    DANIFICADO
+    PERDA
+    VENDA
+    AJUSTE_ENTRADA
+    AJUSTE_SAIDA
 }
 
 model InventoryMovement {
-  id        String   @id @default(cuid())
+    id String @id @default(cuid())
 
-  productId String
-  product   Product  @relation(fields: [productId], references: [id])
+    productId String
+    product   Product @relation(fields: [productId], references: [id])
 
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
+    userId String
+    user   User   @relation(fields: [userId], references: [id])
 
-  type      InventoryMovementType
-  quantity  Int
-  note      String?
+    type     InventoryMovementType
+    quantity Int
+    note     String?
 
-  saleId    String?
-  sale      Sale?    @relation(fields: [saleId], references: [id])
+    saleId String?
+    sale   Sale?   @relation(fields: [saleId], references: [id])
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 }
 
 enum StatusCash {
-  ABERTO
-  FECHADO
+    ABERTO
+    FECHADO
 }
 
 model CashRegister {
-  id                   String       @id @default(cuid())
+    id String @id @default(cuid())
 
-  openedByUserId       String
-  openedByUser         User         @relation(fields: [openedByUserId], references: [id])
-  activeOpenedByUserId String?      @unique
+    openedByUserId       String
+    openedByUser         User    @relation(fields: [openedByUserId], references: [id])
+    activeOpenedByUserId String? @unique
 
-  initialBalance       Decimal
-  status               StatusCash   @default(ABERTO)
-  openedAt             DateTime     @default(now())
-  closedAt             DateTime?
+    initialBalance Decimal
+    status         StatusCash @default(ABERTO)
+    openedAt       DateTime   @default(now())
+    closedAt       DateTime?
+    note           String?
 
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
-  deletedAt            DateTime?
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt
+    deletedAt DateTime?
 
-  cashMovements        CashMovement[]
-  sales                Sale[]
+    cashMovements CashMovement[]
+    sales         Sale[]
 }
 
 enum TypeCashMovement {
-  ABERTURA
-  VENDA
-  CANCELAMENTO
-  ENTRADA
-  SAIDA
+    ABERTURA
+    VENDA
+    CANCELAMENTO
+    ENTRADA
+    SAIDA
 }
 
 model CashMovement {
-  id              String        @id @default(cuid())
+    id String @id @default(cuid())
 
-  cashRegisterId  String
-  cashRegister    CashRegister  @relation(fields: [cashRegisterId], references: [id])
+    cashRegisterId String
+    cashRegister   CashRegister @relation(fields: [cashRegisterId], references: [id])
 
-  saleId          String?
-  sale            Sale?         @relation(fields: [saleId], references: [id])
+    saleId String?
+    sale   Sale?   @relation(fields: [saleId], references: [id])
 
-  type            TypeCashMovement
-  amount          Decimal
-  note            String?
+    type   TypeCashMovement
+    amount Decimal
+    note   String?
 
-  createdByUserId String
-  createdByUser   User          @relation(fields: [createdByUserId], references: [id])
+    createdByUserId String
+    createdByUser   User   @relation(fields: [createdByUserId], references: [id])
 
-  createdAt       DateTime      @default(now())
+    createdAt DateTime @default(now())
 }
 
 enum FormaPagamento {
-  DINHEIRO
-  CARTAO
-  PIX
-  CREDITO
-  DEBITO
+    DINHEIRO
+    CARTAO
+    PIX
+    CREDITO
+    DEBITO
 }
 
 enum StatusVenda {
-  CONFIRMADA
-  CANCELADA
+    CONFIRMADA
+    CANCELADA
 }
 
 model Sale {
-  id                 String          @id @default(cuid())
-  receiptNumber      Int             @unique
+    id            String @id @default(cuid())
+    receiptNumber Int    @unique
 
-  cashRegisterId     String
-  cashRegister       CashRegister    @relation(fields: [cashRegisterId], references: [id])
+    cashRegisterId String
+    cashRegister   CashRegister @relation(fields: [cashRegisterId], references: [id])
 
-  soldByUserId       String
-  soldByUser         User            @relation(fields: [soldByUserId], references: [id])
+    soldByUserId String
+    soldByUser   User   @relation(fields: [soldByUserId], references: [id])
 
-  subtotal           Decimal
-  discountAmount     Decimal         @default(0)
-  totalAmount        Decimal
-  paymentMethod      FormaPagamento
-  status             StatusVenda     @default(CONFIRMADA)
-  cancelledAt        DateTime?
-  cancelReason       String?
+    subtotal       Decimal
+    discountAmount Decimal        @default(0)
+    totalAmount    Decimal
+    paymentMethod  FormaPagamento
+    status         StatusVenda    @default(CONFIRMADA)
+    cancelledAt    DateTime?
+    cancelReason   String?
 
-  items              SaleItem[]
-  inventoryMovements InventoryMovement[]
-  cashMovements      CashMovement[]
+    items              SaleItem[]
+    inventoryMovements InventoryMovement[]
+    cashMovements      CashMovement[]
 
-  createdAt          DateTime        @default(now())
+    createdAt DateTime @default(now())
 }
 
 model SaleItem {
-  id                  String   @id @default(cuid())
+    id String @id @default(cuid())
 
-  saleId              String
-  sale                Sale     @relation(fields: [saleId], references: [id])
+    saleId String
+    sale   Sale   @relation(fields: [saleId], references: [id])
 
-  productId           String
-  product             Product  @relation(fields: [productId], references: [id])
+    productId String
+    product   Product @relation(fields: [productId], references: [id])
 
-  productNameSnapshot String
-  productEanSnapshot  String
-  unitPriceSnapshot   Decimal
-  quantity            Int
-  subtotal            Decimal
+    productNameSnapshot String
+    productEanSnapshot  String
+    unitPriceSnapshot   Decimal
+    quantity            Int
+    subtotal            Decimal
 }

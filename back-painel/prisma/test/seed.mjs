@@ -470,6 +470,16 @@ async function main() {
     });
 
     try {
+        await prisma.$transaction([
+            prisma.cashMovement.deleteMany(),
+            prisma.inventoryMovement.deleteMany(),
+            prisma.saleItem.deleteMany(),
+            prisma.sale.deleteMany(),
+            prisma.cashRegister.deleteMany(),
+            prisma.product.deleteMany(),
+            prisma.user.deleteMany(),
+        ]);
+
         for (const user of users) {
             await prisma.user.create({ data: user });
         }
