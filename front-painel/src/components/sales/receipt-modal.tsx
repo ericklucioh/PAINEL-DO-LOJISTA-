@@ -99,7 +99,11 @@ export function ReceiptModal({
 
                 {errorMessage ? (
                     <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-                        {errorMessage}
+                        <div className="font-semibold">Erro ao imprimir.</div>
+                        <div className="mt-1">Tentar novamente?</div>
+                        <div className="mt-2 text-sm text-rose-600">
+                            {errorMessage}
+                        </div>
                     </div>
                 ) : null}
 
