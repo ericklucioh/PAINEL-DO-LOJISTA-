@@ -70,6 +70,18 @@ function createAuthResponse(
     };
 }
 
+function assertValidRefreshToken(refreshToken: string): AuthTokenPayload {
+    if (refreshToken.trim().length === 0) {
+        throw createHttpError("Refresh token ausente", 401);
+    }
+
+    try {
+        return verifyRefreshToken(refreshToken);
+    } catch {
+        throw createHttpError("Refresh token inválido", 401);
+    }
+}
+
 export function createAuthService({
     prisma,
 }: CreateAuthServiceDependencies): AuthService {
@@ -105,16 +117,7 @@ export function createAuthService({
         },
 
         async refresh(refreshToken) {
-            if (refreshToken.trim().length === 0) {
-                throw createHttpError("Refresh token ausente", 401);
-            }
-
-            let decoded: AuthTokenPayload;
-            try {
-                decoded = verifyRefreshToken(refreshToken);
-            } catch {
-                throw createHttpError("Refresh token inválido", 401);
-            }
+            const decoded = assertValidRefreshToken(refreshToken);
 
             const account = await prisma.user.findUnique({
                 where: {
@@ -139,11 +142,7 @@ export function createAuthService({
         },
 
         async logout(refreshToken) {
-            if (refreshToken.trim().length === 0) {
-                throw createHttpError("Refresh token ausente", 401);
-            }
-
-            return;
+            assertValidRefreshToken(refreshToken);
         },
     };
 }
