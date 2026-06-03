@@ -37,7 +37,7 @@ format_files() {
 		exit 1
 	fi
 
-	(cd "$repo_root/$root" && "$prettier_bin" --write -- "${files[@]}")
+	(cd "$repo_root/$root" && "$prettier_bin" --ignore-unknown --write -- "${files[@]}")
 
 	local -a staged_paths=()
 	for file in "${files[@]}"; do
@@ -60,7 +60,7 @@ format_generic_files() {
 		exit 1
 	fi
 
-	(cd "$repo_root" && "$prettier_bin" --write -- "${files[@]}")
+	(cd "$repo_root" && "$prettier_bin" --ignore-unknown --write -- "${files[@]}")
 	git add -- "${files[@]}"
 }
 
