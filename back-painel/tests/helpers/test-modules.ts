@@ -15,6 +15,7 @@ import { createSalesService } from "../../src/modules/sales/sales.service";
 import { createSalesProductsService } from "../../src/modules/sales-products/sales-products.service";
 import { createStockController } from "../../src/modules/stock/stock.controller";
 import { createStockRouter } from "../../src/modules/stock/stock.routes";
+import { createStockService } from "../../src/modules/stock/stock.service";
 import { createUsersController } from "../../src/modules/users/users.controller";
 import { createUsersRouter } from "../../src/modules/users/users.routes";
 import { createUsersService } from "../../src/modules/users/users.service";
@@ -25,7 +26,8 @@ type TestPrismaForServices = Parameters<typeof createAuthService>[0]["prisma"] &
     Parameters<typeof createUsersService>[0]["prisma"] &
     Parameters<typeof createProductsService>[0]["prisma"] &
     Parameters<typeof createCashRegistersService>[0]["prisma"] &
-    Parameters<typeof createSalesService>[0]["prisma"];
+    Parameters<typeof createSalesService>[0]["prisma"] &
+    Parameters<typeof createStockService>[0]["prisma"];
 
 export interface TestModules {
     prisma: ReturnType<typeof createTestClient>;
@@ -57,7 +59,9 @@ export function createTestModules(): TestModules {
     const productsController = createProductsController({
         service: createProductsService({ prisma: prismaForServices }),
     });
-    const stockController = createStockController();
+    const stockController = createStockController({
+        service: createStockService({ prisma: prismaForServices }),
+    });
     const salesController = createSalesController({
         service: createSalesService({
             prisma: prismaForServices,

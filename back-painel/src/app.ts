@@ -13,6 +13,7 @@ import { createProductsService } from "./modules/products/products.service";
 import { createProductsController } from "./modules/products/products.controller";
 import { createStockController } from "./modules/stock/stock.controller";
 import { createStockRouter } from "./modules/stock/stock.routes";
+import { createStockService } from "./modules/stock/stock.service";
 import { createSalesController } from "./modules/sales/sales.controller";
 import { createSalesRouter } from "./modules/sales/sales.routes";
 import { createSalesService } from "./modules/sales/sales.service";
@@ -76,7 +77,13 @@ export function createApp({
                 prisma: getPrisma(),
             }),
         });
-    const resolvedStockController = stockController ?? createStockController();
+    const resolvedStockController =
+        stockController ??
+        createStockController({
+            service: createStockService({
+                prisma: getPrisma(),
+            }),
+        });
     const resolvedSalesService = createSalesService({
         prisma: getPrisma(),
         salesProductsService: createSalesProductsService(),

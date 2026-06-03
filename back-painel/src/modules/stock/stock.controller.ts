@@ -1,9 +1,14 @@
 import type { RequestHandler } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
+import { createHttpError } from "../../utils/httpError";
 import {
+    StockEntryBodySchema,
+    StockExitBodySchema,
+    StockHistoryQuerySchema,
     StockHistoryResponseSchema,
     StockMovementResponseSchema,
 } from "./stock.schema";
+import type { StockService } from "./stock.service";
 
 export interface StockController {
     entry: RequestHandler;
@@ -11,7 +16,9 @@ export interface StockController {
     history: RequestHandler;
 }
 
-export interface CreateStockControllerDependencies {}
+export interface CreateStockControllerDependencies {
+    service: StockService;
+}
 
 function sendValidationError(
     res: Parameters<RequestHandler>[1],
@@ -23,79 +30,65 @@ function sendValidationError(
     });
 }
 
-function toNumber(value: unknown): number {
-    return Number(value);
+function requireAuthUser(req: Parameters<RequestHandler>[0]) {
+    const authUser = req.authUser;
+
+    if (authUser === undefined) {
+        throw createHttpError("Token inválido", 401);
+    }
+
+    return authUser;
 }
 
-export function createStockController(): StockController {
+export function createStockController({
+    service,
+}: CreateStockControllerDependencies): StockController {
     return {
         entry: asyncHandler(async (req, res) => {
-            const productId = String(
-                (req.body as { productId?: string }).productId ?? "",
-            );
-            const quantity = toNumber(
-                (req.body as { quantity?: unknown }).quantity ?? 0,
-            );
-            const note = (req.body as { note?: string | null }).note ?? null;
-            const reason =
-                note ??
-                String((req.body as { reason?: string }).reason ?? "ENTRY");
+            const parsedBody = StockEntryBodySchema.safeParse(req.body);
+            if (!parsedBody.success) {
+                sendValidationError(res, parsedBody.error.issues);
+                return;
+            }
 
-            const response = StockMovementResponseSchema.parse({
-                movement: {
-                    id: `movement_${productId || "entry"}`,
-                    type: "ENTRY",
-                    reason,
-                    quantity,
-                    balanceAfter: quantity,
-                    note,
-                    createdAt: new Date().toISOString(),
-                },
+            const authUser = requireAuthUser(req);
+
+            const response = await service.entry({
+                ...parsedBody.data,
+                createdByUserId: authUser.sub,
             });
 
-            res.status(201).json(response);
+            res.status(201).json(StockMovementResponseSchema.parse(response));
         }),
 
         exit: asyncHandler(async (req, res) => {
-            const productId = String(
-                (req.body as { productId?: string }).productId ?? "",
-            );
-            const quantity = toNumber(
-                (req.body as { quantity?: unknown }).quantity ?? 0,
-            );
-            const note = (req.body as { note?: string | null }).note ?? null;
-            const reason =
-                note ??
-                String((req.body as { reason?: string }).reason ?? "EXIT");
+            const parsedBody = StockExitBodySchema.safeParse(req.body);
+            if (!parsedBody.success) {
+                sendValidationError(res, parsedBody.error.issues);
+                return;
+            }
 
-            const response = StockMovementResponseSchema.parse({
-                movement: {
-                    id: `movement_${productId || "exit"}`,
-                    type: "EXIT",
-                    reason,
-                    quantity,
-                    balanceAfter: -quantity,
-                    note,
-                    createdAt: new Date().toISOString(),
-                },
+            const authUser = requireAuthUser(req);
+
+            const response = await service.exit({
+                ...parsedBody.data,
+                createdByUserId: authUser.sub,
             });
 
-            res.status(201).json(response);
+            res.status(201).json(StockMovementResponseSchema.parse(response));
         }),
 
         history: asyncHandler(async (req, res) => {
-            const productId = String(req.query.produto_id ?? "");
+            const parsedQuery = StockHistoryQuerySchema.safeParse(req.query);
+            if (!parsedQuery.success) {
+                sendValidationError(res, parsedQuery.error.issues);
+                return;
+            }
 
-            const response = StockHistoryResponseSchema.parse({
-                product: {
-                    id: productId,
-                    ean: "0000000000000",
-                    name: "Produto de teste",
-                },
-                data: [],
-            });
+            requireAuthUser(req);
 
-            res.status(200).json(response);
+            const response = await service.history(parsedQuery.data.produto_id);
+            res.status(200).json(StockHistoryResponseSchema.parse(response));
         }),
     };
 }
