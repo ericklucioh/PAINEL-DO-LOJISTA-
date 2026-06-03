@@ -1,22 +1,27 @@
 import { z } from "zod";
 
+export const OpenCashRegisterBodySchema = z.object({
+    initialBalance: z.number().positive(),
+    note: z.string().trim().max(180).optional(),
+});
+
 export const CashRegisterSchema = z.object({
     id: z.string(),
     openedByUserId: z.string(),
-    activeOpenedByUserId: z.string().nullable(),
+    openedByUserName: z.string(),
     initialBalance: z.number(),
-    status: z.enum(["ABERTO", "FECHADO"]),
+    currentBalance: z.number(),
+    status: z.enum(["OPEN", "CLOSED"]),
     openedAt: z.string(),
     closedAt: z.string().nullable(),
-    createdAt: z.string(),
-    updatedAt: z.string(),
-    deletedAt: z.string().nullable(),
+    note: z.string().nullable(),
 });
 
 export const OpenCashRegisterResponseSchema = z.object({
     cashRegister: CashRegisterSchema,
 });
 
+export type OpenCashRegisterBody = z.infer<typeof OpenCashRegisterBodySchema>;
 export type CashRegisterDto = z.infer<typeof CashRegisterSchema>;
 export type OpenCashRegisterResponse = z.infer<
     typeof OpenCashRegisterResponseSchema

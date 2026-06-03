@@ -48,6 +48,32 @@ describe("cash-registers routes", () => {
         });
     });
 
+    it("rejects opening a second cash register for the same seller", async () => {
+        const vendor = await loginAsVendor(testApp.app);
+
+        await request(testApp.app)
+            .post("/api/cash-registers/open")
+            .set("Authorization", bearer(vendor.accessToken))
+            .send({
+                initialBalance: 150,
+                note: "Primeira abertura",
+            })
+            .expect(201);
+
+        const response = await request(testApp.app)
+            .post("/api/cash-registers/open")
+            .set("Authorization", bearer(vendor.accessToken))
+            .send({
+                initialBalance: 200,
+                note: "Segunda abertura",
+            });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.body).toMatchObject({
+            message: "Já existe um caixa aberto para este usuário",
+        });
+    });
+
     it("rejects admin access on vendor-only cash register routes", async () => {
         const admin = await loginAsWrongUser(testApp.app, "VENDEDOR");
 
