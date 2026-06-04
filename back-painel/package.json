@@ -14,9 +14,9 @@
         "prisma:seed": "node prisma/seed.mjs",
         "prisma:test:generate": "prisma generate --config prisma/test.config.ts",
         "prisma:test:reset": "node prisma/test/reset.mjs",
-        "test": "npm run prisma:test:generate && vitest",
-        "test:run": "npm run prisma:test:generate && vitest run",
-        "test:watch": "npm run prisma:test:generate && vitest"
+        "test": "npm run prisma:test:generate && npm run prisma:test:reset && vitest",
+        "test:run": "npm run prisma:test:generate && npm run prisma:test:reset && vitest run",
+        "test:watch": "npm run prisma:test:generate && npm run prisma:test:reset && vitest"
     },
     "keywords": [],
     "author": "",

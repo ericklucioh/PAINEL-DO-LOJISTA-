@@ -37,5 +37,11 @@ for (const filePath of testDatabaseFiles) {
     removeIfExists(filePath);
 }
 
-runCommand(prismaBinary, ["db", "push", "--config", "prisma/test.config.ts"]);
+runCommand(prismaBinary, [
+    "db",
+    "push",
+    "--force-reset",
+    "--config",
+    "prisma/test.config.ts",
+]);
 runCommand(process.execPath, ["prisma/test/seed.mjs"]);
