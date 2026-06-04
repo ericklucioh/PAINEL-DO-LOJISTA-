@@ -2,21 +2,14 @@
 
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/components/sales/sales.helpers";
+import { controlClassName } from "@/components/ui/form-field";
 import type { CartItem } from "@/stores/cart.store";
-import { cn } from "@/lib/utils";
 
 type CartTableProps = {
     items: CartItem[];
     onQuantityChange: (productId: string, quantity: number) => void;
     onRemoveItem: (productId: string) => void;
 };
-
-function fieldClassName(hasError: boolean): string {
-    return cn(
-        "w-full rounded-2xl border bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-slate-400",
-        hasError ? "border-rose-300" : "border-slate-200",
-    );
-}
 
 export function CartTable({
     items,
@@ -69,8 +62,9 @@ export function CartTable({
                                         </td>
                                         <td className="px-5 py-4">
                                             <input
-                                                className={fieldClassName(
+                                                className={controlClassName(
                                                     false,
+                                                    "w-24",
                                                 )}
                                                 type="number"
                                                 min="1"

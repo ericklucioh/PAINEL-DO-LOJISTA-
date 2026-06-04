@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/components/providers/toaster";
+import { TextField } from "@/components/ui/form-field";
 import { authService } from "@/services/auth.service";
 import { LoginSchema, type LoginFormValues } from "@/schemas/auth.schema";
 
@@ -78,39 +79,21 @@ export function LoginForm({ nextPath }: { nextPath: string | null }) {
             </div>
 
             <form className="space-y-5" onSubmit={onSubmit}>
-                <label className="block space-y-2">
-                    <span className="text-sm font-medium text-slate-700">
-                        E-mail
-                    </span>
-                    <input
-                        type="email"
-                        autoComplete="email"
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-slate-400"
-                        {...register("email")}
-                    />
-                    {errors.email ? (
-                        <span className="text-sm text-rose-600">
-                            {errors.email.message}
-                        </span>
-                    ) : null}
-                </label>
+                <TextField
+                    label="E-mail"
+                    type="email"
+                    autoComplete="email"
+                    error={errors.email?.message}
+                    {...register("email")}
+                />
 
-                <label className="block space-y-2">
-                    <span className="text-sm font-medium text-slate-700">
-                        Senha
-                    </span>
-                    <input
-                        type="password"
-                        autoComplete="current-password"
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-slate-400"
-                        {...register("password")}
-                    />
-                    {errors.password ? (
-                        <span className="text-sm text-rose-600">
-                            {errors.password.message}
-                        </span>
-                    ) : null}
-                </label>
+                <TextField
+                    label="Senha"
+                    type="password"
+                    autoComplete="current-password"
+                    error={errors.password?.message}
+                    {...register("password")}
+                />
 
                 <button
                     type="submit"

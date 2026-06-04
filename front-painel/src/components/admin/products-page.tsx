@@ -3,28 +3,14 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ProductFormDialog } from "@/components/admin/product-form-dialog";
+import { PageHeader } from "@/components/ui/page-header";
+import { TextField } from "@/components/ui/form-field";
 import { useToast } from "@/components/providers/toaster";
 import { productsService } from "@/services/products.service";
+import { formatCurrency, formatDate } from "@/lib/formatters";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { ProductFormValues } from "@/schemas/product.schema";
 import type { ProductListItem } from "@/types/api";
-
-type ProductApiError = {
-    message?: string;
-};
-
-function formatCurrency(value: number): string {
-    return new Intl.NumberFormat("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-    }).format(value);
-}
-
-function formatDate(value: string): string {
-    return new Intl.DateTimeFormat("pt-BR", {
-        dateStyle: "short",
-        timeStyle: "short",
-    }).format(new Date(value));
-}
 
 export function ProductsPage() {
     const { toast } = useToast();
@@ -62,10 +48,10 @@ export function ProductsPage() {
                     return;
                 }
 
-                const message =
-                    (loadError as { response?: { data?: ProductApiError } })
-                        .response?.data?.message ??
-                    "Não foi possível carregar os produtos.";
+                const message = getApiErrorMessage(
+                    loadError,
+                    "Não foi possível carregar os produtos.",
+                );
                 toast({
                     variant: "error",
                     title: "Falha ao carregar produtos",
@@ -107,12 +93,10 @@ export function ProductsPage() {
                 title: "Produto criado com sucesso",
             });
         } catch (createError) {
-            const apiError = createError as {
-                response?: { data?: ProductApiError };
-            };
-            const message =
-                apiError.response?.data?.message ??
-                "Não foi possível criar o produto.";
+            const message = getApiErrorMessage(
+                createError,
+                "Não foi possível criar o produto.",
+            );
             toast({
                 variant: "error",
                 title: "Falha ao criar produto",
@@ -135,12 +119,10 @@ export function ProductsPage() {
                 title: "Produto atualizado com sucesso",
             });
         } catch (updateError) {
-            const apiError = updateError as {
-                response?: { data?: ProductApiError };
-            };
-            const message =
-                apiError.response?.data?.message ??
-                "Não foi possível atualizar o produto.";
+            const message = getApiErrorMessage(
+                updateError,
+                "Não foi possível atualizar o produto.",
+            );
             toast({
                 variant: "error",
                 title: "Falha ao atualizar produto",
@@ -170,12 +152,10 @@ export function ProductsPage() {
                 title: "Produto inativado com sucesso",
             });
         } catch (deactivateError) {
-            const apiError = deactivateError as {
-                response?: { data?: ProductApiError };
-            };
-            const message =
-                apiError.response?.data?.message ??
-                "Não foi possível inativar o produto.";
+            const message = getApiErrorMessage(
+                deactivateError,
+                "Não foi possível inativar o produto.",
+            );
             toast({
                 variant: "error",
                 title: "Falha ao inativar produto",
@@ -188,21 +168,12 @@ export function ProductsPage() {
 
     return (
         <div className="space-y-6">
-            <div className="rounded-[2rem] border border-slate-200 bg-[linear-gradient(135deg,rgba(7,89,133,0.98),rgba(14,116,144,0.92))] p-6 text-white shadow-[0_24px_80px_rgba(15,23,42,0.16)]">
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="max-w-3xl space-y-3">
-                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-100/80">
-                            Admin / Produtos
-                        </p>
-                        <h2 className="text-3xl font-semibold tracking-tight">
-                            Gestão de produtos
-                        </h2>
-                        <p className="max-w-2xl text-sm leading-6 text-cyan-50/80">
-                            Catalogação com busca por nome ou EAN, destaque de
-                            estoque crítico e ações de criar, editar e inativar.
-                        </p>
-                    </div>
-
+            <PageHeader
+                tone="cyan"
+                eyebrow="Admin / Produtos"
+                title="Gestão de produtos"
+                description="Catalogação com busca por nome ou EAN, destaque de estoque crítico e ações de criar, editar e inativar."
+                action={
                     <Button
                         type="button"
                         onClick={() => {
@@ -212,8 +183,8 @@ export function ProductsPage() {
                     >
                         Novo produto
                     </Button>
-                </div>
-            </div>
+                }
+            />
 
             <div className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-1">
@@ -225,20 +196,16 @@ export function ProductsPage() {
                     </p>
                 </div>
 
-                <label className="flex w-full max-w-md flex-col gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                        Buscar
-                    </span>
-                    <input
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-400"
-                        placeholder="Nome ou EAN"
-                        value={search}
-                        onChange={(event) => {
-                            setPage(1);
-                            setSearch(event.target.value);
-                        }}
-                    />
-                </label>
+                <TextField
+                    className="w-full max-w-md"
+                    label="Buscar"
+                    placeholder="Nome ou EAN"
+                    value={search}
+                    onChange={(event) => {
+                        setPage(1);
+                        setSearch(event.target.value);
+                    }}
+                />
             </div>
 
             <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">

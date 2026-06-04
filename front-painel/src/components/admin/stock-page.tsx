@@ -4,9 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
+import {
+    SelectField,
+    TextField,
+    TextareaField,
+} from "@/components/ui/form-field";
 import { useToast } from "@/components/providers/toaster";
 import { productsService } from "@/services/products.service";
 import { stockService } from "@/services/stock.service";
+import { formatDate } from "@/lib/formatters";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { ProductListItem, StockMovement } from "@/types/api";
 import {
     StockEntryFormSchema,
@@ -16,14 +24,6 @@ import type {
     StockEntryFormValues,
     StockExitFormValues,
 } from "@/schemas/stock.schema";
-import { cn } from "@/lib/utils";
-
-function formatDate(value: string): string {
-    return new Intl.DateTimeFormat("pt-BR", {
-        dateStyle: "short",
-        timeStyle: "short",
-    }).format(new Date(value));
-}
 
 function formatReason(reason: string): string {
     return reason
@@ -31,13 +31,6 @@ function formatReason(reason: string): string {
         .split("_")
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(" ");
-}
-
-function fieldClassName(hasError: boolean): string {
-    return cn(
-        "w-full rounded-2xl border bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-slate-400",
-        hasError ? "border-rose-300" : "border-slate-200",
-    );
 }
 
 export function StockPage() {
@@ -105,12 +98,15 @@ export function StockPage() {
                     exitForm.setValue("productId", "");
                     setHistory([]);
                 }
-            } catch {
+            } catch (error) {
                 if (active) {
                     toast({
                         variant: "error",
                         title: "Falha ao carregar produtos",
-                        description: "Não foi possível carregar os produtos.",
+                        description: getApiErrorMessage(
+                            error,
+                            "Não foi possível carregar os produtos.",
+                        ),
                     });
                 }
             } finally {
@@ -144,12 +140,15 @@ export function StockPage() {
                 }
 
                 setHistory(response.data);
-            } catch {
+            } catch (error) {
                 if (active) {
                     toast({
                         variant: "error",
                         title: "Falha ao carregar histórico",
-                        description: "Não foi possível carregar o histórico.",
+                        description: getApiErrorMessage(
+                            error,
+                            "Não foi possível carregar o histórico.",
+                        ),
                     });
                 }
             } finally {
@@ -183,12 +182,10 @@ export function StockPage() {
             const response = await stockService.history(values.productId);
             setHistory(response.data);
         } catch (submitError) {
-            const apiError = submitError as {
-                response?: { data?: { message?: string } };
-            };
-            const message =
-                apiError.response?.data?.message ??
-                "Não foi possível registrar a entrada.";
+            const message = getApiErrorMessage(
+                submitError,
+                "Não foi possível registrar a entrada.",
+            );
             toast({
                 variant: "error",
                 title: "Falha ao registrar entrada",
@@ -207,12 +204,10 @@ export function StockPage() {
             const response = await stockService.history(values.productId);
             setHistory(response.data);
         } catch (submitError) {
-            const apiError = submitError as {
-                response?: { data?: { message?: string } };
-            };
-            const message =
-                apiError.response?.data?.message ??
-                "Não foi possível registrar a saída.";
+            const message = getApiErrorMessage(
+                submitError,
+                "Não foi possível registrar a saída.",
+            );
             toast({
                 variant: "error",
                 title: "Falha ao registrar saída",
@@ -223,20 +218,12 @@ export function StockPage() {
 
     return (
         <div className="space-y-6">
-            <div className="rounded-[2rem] border border-slate-200 bg-[linear-gradient(135deg,rgba(24,24,27,0.98),rgba(63,63,70,0.92))] p-6 text-white shadow-[0_24px_80px_rgba(15,23,42,0.16)]">
-                <div className="space-y-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                        Admin / Estoque
-                    </p>
-                    <h2 className="text-3xl font-semibold tracking-tight">
-                        Movimentações de estoque
-                    </h2>
-                    <p className="max-w-3xl text-sm leading-6 text-slate-300">
-                        Registre entrada, saída e acompanhe o histórico com
-                        saldo acumulado do produto selecionado.
-                    </p>
-                </div>
-            </div>
+            <PageHeader
+                tone="zinc"
+                eyebrow="Admin / Estoque"
+                title="Movimentações de estoque"
+                description="Registre entrada, saída e acompanhe o histórico com saldo acumulado do produto selecionado."
+            />
 
             <div className="grid gap-6 lg:grid-cols-[1fr_1.15fr]">
                 <div className="space-y-6">
@@ -251,51 +238,36 @@ export function StockPage() {
                             </p>
                         </div>
 
-                        <label className="grid gap-2">
-                            <span className="text-sm font-medium text-slate-700">
-                                Buscar produto
-                            </span>
-                            <input
-                                className={fieldClassName(false)}
-                                placeholder="Nome ou EAN"
-                                value={productSearch}
-                                onChange={(event) => {
-                                    setProductSearch(event.target.value);
-                                }}
-                            />
-                        </label>
+                        <TextField
+                            label="Buscar produto"
+                            placeholder="Nome ou EAN"
+                            value={productSearch}
+                            onChange={(event) => {
+                                setProductSearch(event.target.value);
+                            }}
+                        />
 
-                        <label className="mt-4 grid gap-2">
-                            <span className="text-sm font-medium text-slate-700">
-                                Produto selecionado
-                            </span>
-                            <select
-                                className={fieldClassName(false)}
-                                value={selectedProductId}
-                                onChange={(event) => {
-                                    const nextProductId = event.target.value;
-                                    setSelectedProductId(nextProductId);
-                                    entryForm.setValue(
-                                        "productId",
-                                        nextProductId,
-                                    );
-                                    exitForm.setValue(
-                                        "productId",
-                                        nextProductId,
-                                    );
-                                    if (!nextProductId) {
-                                        setHistory([]);
-                                    }
-                                }}
-                            >
-                                <option value="">Selecione um produto</option>
-                                {products.map((product) => (
-                                    <option key={product.id} value={product.id}>
-                                        {product.name} - {product.ean}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
+                        <SelectField
+                            className="mt-4"
+                            label="Produto selecionado"
+                            value={selectedProductId}
+                            onChange={(event) => {
+                                const nextProductId = event.target.value;
+                                setSelectedProductId(nextProductId);
+                                entryForm.setValue("productId", nextProductId);
+                                exitForm.setValue("productId", nextProductId);
+                                if (!nextProductId) {
+                                    setHistory([]);
+                                }
+                            }}
+                        >
+                            <option value="">Selecione um produto</option>
+                            {products.map((product) => (
+                                <option key={product.id} value={product.id}>
+                                    {product.name} - {product.ean}
+                                </option>
+                            ))}
+                        </SelectField>
 
                         <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
                             {loadingProducts ? (
@@ -334,84 +306,40 @@ export function StockPage() {
                             </div>
 
                             <div className="grid gap-4">
-                                <label className="grid gap-2">
-                                    <span className="text-sm font-medium text-slate-700">
-                                        Tipo
-                                    </span>
-                                    <select
-                                        className={fieldClassName(
-                                            Boolean(
-                                                entryForm.formState.errors.type,
-                                            ),
-                                        )}
-                                        {...entryForm.register("type")}
-                                    >
-                                        <option value="COMPRA">Compra</option>
-                                        <option value="DEVOLUCAO">
-                                            Devolução
-                                        </option>
-                                        <option value="OUTROS">Outros</option>
-                                    </select>
-                                    {entryForm.formState.errors.type ? (
-                                        <span className="text-sm text-rose-600">
-                                            {
-                                                entryForm.formState.errors.type
-                                                    .message
-                                            }
-                                        </span>
-                                    ) : null}
-                                </label>
+                                <SelectField
+                                    label="Tipo"
+                                    error={
+                                        entryForm.formState.errors.type?.message
+                                    }
+                                    {...entryForm.register("type")}
+                                >
+                                    <option value="COMPRA">Compra</option>
+                                    <option value="DEVOLUCAO">Devolução</option>
+                                    <option value="OUTROS">Outros</option>
+                                </SelectField>
 
-                                <label className="grid gap-2">
-                                    <span className="text-sm font-medium text-slate-700">
-                                        Quantidade
-                                    </span>
-                                    <input
-                                        className={fieldClassName(
-                                            Boolean(
-                                                entryForm.formState.errors
-                                                    .quantity,
-                                            ),
-                                        )}
-                                        type="number"
-                                        min="1"
-                                        step="1"
-                                        {...entryForm.register("quantity", {
-                                            valueAsNumber: true,
-                                        })}
-                                    />
-                                    {entryForm.formState.errors.quantity ? (
-                                        <span className="text-sm text-rose-600">
-                                            {
-                                                entryForm.formState.errors
-                                                    .quantity.message
-                                            }
-                                        </span>
-                                    ) : null}
-                                </label>
+                                <TextField
+                                    label="Quantidade"
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    error={
+                                        entryForm.formState.errors.quantity
+                                            ?.message
+                                    }
+                                    {...entryForm.register("quantity", {
+                                        valueAsNumber: true,
+                                    })}
+                                />
 
-                                <label className="grid gap-2">
-                                    <span className="text-sm font-medium text-slate-700">
-                                        Observação
-                                    </span>
-                                    <textarea
-                                        className={fieldClassName(
-                                            Boolean(
-                                                entryForm.formState.errors.note,
-                                            ),
-                                        )}
-                                        rows={4}
-                                        {...entryForm.register("note")}
-                                    />
-                                    {entryForm.formState.errors.note ? (
-                                        <span className="text-sm text-rose-600">
-                                            {
-                                                entryForm.formState.errors.note
-                                                    .message
-                                            }
-                                        </span>
-                                    ) : null}
-                                </label>
+                                <TextareaField
+                                    label="Observação"
+                                    rows={4}
+                                    error={
+                                        entryForm.formState.errors.note?.message
+                                    }
+                                    {...entryForm.register("note")}
+                                />
 
                                 <Button
                                     type="submit"
@@ -442,83 +370,41 @@ export function StockPage() {
                             </div>
 
                             <div className="grid gap-4">
-                                <label className="grid gap-2">
-                                    <span className="text-sm font-medium text-slate-700">
-                                        Tipo
-                                    </span>
-                                    <select
-                                        className={fieldClassName(
-                                            Boolean(
-                                                exitForm.formState.errors.type,
-                                            ),
-                                        )}
-                                        {...exitForm.register("type")}
-                                    >
-                                        <option value="DANIFICADO">
-                                            Danificado
-                                        </option>
-                                        <option value="PERDA">Perda</option>
-                                    </select>
-                                    {exitForm.formState.errors.type ? (
-                                        <span className="text-sm text-rose-600">
-                                            {
-                                                exitForm.formState.errors.type
-                                                    .message
-                                            }
-                                        </span>
-                                    ) : null}
-                                </label>
+                                <SelectField
+                                    label="Tipo"
+                                    error={
+                                        exitForm.formState.errors.type?.message
+                                    }
+                                    {...exitForm.register("type")}
+                                >
+                                    <option value="DANIFICADO">
+                                        Danificado
+                                    </option>
+                                    <option value="PERDA">Perda</option>
+                                </SelectField>
 
-                                <label className="grid gap-2">
-                                    <span className="text-sm font-medium text-slate-700">
-                                        Quantidade
-                                    </span>
-                                    <input
-                                        className={fieldClassName(
-                                            Boolean(
-                                                exitForm.formState.errors
-                                                    .quantity,
-                                            ),
-                                        )}
-                                        type="number"
-                                        min="1"
-                                        step="1"
-                                        {...exitForm.register("quantity", {
-                                            valueAsNumber: true,
-                                        })}
-                                    />
-                                    {exitForm.formState.errors.quantity ? (
-                                        <span className="text-sm text-rose-600">
-                                            {
-                                                exitForm.formState.errors
-                                                    .quantity.message
-                                            }
-                                        </span>
-                                    ) : null}
-                                </label>
+                                <TextField
+                                    label="Quantidade"
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    error={
+                                        exitForm.formState.errors.quantity
+                                            ?.message
+                                    }
+                                    {...exitForm.register("quantity", {
+                                        valueAsNumber: true,
+                                    })}
+                                />
 
-                                <label className="grid gap-2">
-                                    <span className="text-sm font-medium text-slate-700">
-                                        Observação
-                                    </span>
-                                    <textarea
-                                        className={fieldClassName(
-                                            Boolean(
-                                                exitForm.formState.errors.note,
-                                            ),
-                                        )}
-                                        rows={4}
-                                        {...exitForm.register("note")}
-                                    />
-                                    {exitForm.formState.errors.note ? (
-                                        <span className="text-sm text-rose-600">
-                                            {
-                                                exitForm.formState.errors.note
-                                                    .message
-                                            }
-                                        </span>
-                                    ) : null}
-                                </label>
+                                <TextareaField
+                                    label="Observação"
+                                    rows={4}
+                                    error={
+                                        exitForm.formState.errors.note?.message
+                                    }
+                                    {...exitForm.register("note")}
+                                />
 
                                 <Button
                                     type="submit"

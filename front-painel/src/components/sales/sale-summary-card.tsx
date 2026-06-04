@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { TextField } from "@/components/ui/form-field";
 import type { CashRegister } from "@/types/api";
 import {
     formatCurrency,
@@ -46,21 +47,14 @@ export function SaleSummaryCard({
                         {formatCurrency(summary.subtotal)}
                     </strong>
                 </div>
-                <label className="grid gap-2">
-                    <span className="text-sm font-medium text-slate-700">
-                        Desconto
-                    </span>
-                    <input
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-slate-400"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={discountInput}
-                        onChange={(event) =>
-                            onDiscountChange(event.target.value)
-                        }
-                    />
-                </label>
+                <TextField
+                    label="Desconto"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={discountInput}
+                    onChange={(event) => onDiscountChange(event.target.value)}
+                />
                 <div className="flex items-center justify-between rounded-2xl bg-slate-950 px-4 py-4 text-white">
                     <span className="text-sm font-medium text-slate-200">
                         Total

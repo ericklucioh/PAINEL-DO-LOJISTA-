@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { cashRegistersService } from "@/services/cash-registers.service";
 import { productsService } from "@/services/products.service";
 import { salesService } from "@/services/sales.service";
@@ -15,38 +16,49 @@ import { CashRegisterModal } from "@/components/sales/cash-register-modal";
 import {
     calculateSaleSummary,
     formatCurrency,
+    formatDate,
     getApiErrorMessage,
     toSaleItems,
 } from "@/components/sales/sales.helpers";
 import { useToast } from "@/components/providers/toaster";
 import { useCartStore } from "@/stores/cart.store";
+import { CashRegisterStorageSchema } from "@/schemas/cash-register.schema";
 import type { CashRegister, ProductListItem, SaleDto } from "@/types/api";
+
+const CASH_REGISTER_STORAGE_KEY = "painel-do-lojista:cash-register";
+
+function readCashRegisterFromStorage(): CashRegister | null {
+    if (typeof window === "undefined") {
+        return null;
+    }
+
+    const raw = window.localStorage.getItem(CASH_REGISTER_STORAGE_KEY);
+    if (raw === null) {
+        return null;
+    }
+
+    try {
+        const parsed = JSON.parse(raw);
+        const result = CashRegisterStorageSchema.safeParse(parsed);
+
+        if (!result.success) {
+            return null;
+        }
+
+        return result.data;
+    } catch {
+        return null;
+    }
+}
 
 export function SalesPage() {
     const { toast } = useToast();
     const [products, setProducts] = useState<ProductListItem[]>([]);
     const [loadingProducts, setLoadingProducts] = useState(true);
     const [eanInput, setEanInput] = useState("");
-    const [cashRegister, setCashRegister] = useState<CashRegister | null>(
-        () => {
-            if (typeof window === "undefined") {
-                return null;
-            }
-
-            const raw = window.localStorage.getItem(
-                "painel-do-lojista:cash-register",
-            );
-            if (!raw) {
-                return null;
-            }
-
-            try {
-                return JSON.parse(raw) as CashRegister;
-            } catch {
-                return null;
-            }
-        },
-    );
+    const [cashRegister, setCashRegister] = useState<CashRegister | null>(null);
+    const [hasHydratedCashRegister, setHasHydratedCashRegister] =
+        useState(false);
     const [isCashRegisterModalOpen, setIsCashRegisterModalOpen] =
         useState(false);
     const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
@@ -107,20 +119,25 @@ export function SalesPage() {
     }, [toast]);
 
     useEffect(() => {
-        if (typeof window === "undefined") {
+        setCashRegister(readCashRegisterFromStorage());
+        setHasHydratedCashRegister(true);
+    }, []);
+
+    useEffect(() => {
+        if (!hasHydratedCashRegister || typeof window === "undefined") {
             return;
         }
 
         if (cashRegister === null) {
-            window.localStorage.removeItem("painel-do-lojista:cash-register");
+            window.localStorage.removeItem(CASH_REGISTER_STORAGE_KEY);
             return;
         }
 
         window.localStorage.setItem(
-            "painel-do-lojista:cash-register",
+            CASH_REGISTER_STORAGE_KEY,
             JSON.stringify(cashRegister),
         );
-    }, [cashRegister]);
+    }, [cashRegister, hasHydratedCashRegister]);
 
     const summary = useMemo(
         () => calculateSaleSummary(cartItems, discountInput),
@@ -375,28 +392,19 @@ export function SalesPage() {
 
     return (
         <div className="space-y-6">
-            <div className="rounded-[2rem] border border-slate-200 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(37,99,235,0.92))] p-6 text-white shadow-[0_24px_80px_rgba(15,23,42,0.16)]">
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="max-w-3xl space-y-3">
-                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100/75">
-                            Vendas / PDV
-                        </p>
-                        <h2 className="text-3xl font-semibold tracking-tight">
-                            Carrinho, desconto e finalização
-                        </h2>
-                        <p className="max-w-2xl text-sm leading-6 text-blue-50/80">
-                            Use o EAN para adicionar itens, ajuste quantidades,
-                            abra o caixa e finalize a venda em dinheiro.
-                        </p>
-                    </div>
-
+            <PageHeader
+                tone="blue"
+                eyebrow="Vendas / PDV"
+                title="Carrinho, desconto e finalização"
+                description="Use o EAN para adicionar itens, ajuste quantidades, abra o caixa e finalize a venda em dinheiro."
+                action={
                     <CashRegisterStatus
                         cashRegister={cashRegister}
                         onCashRegisterAction={handleCashRegisterAction}
                         cashRegisterActionLabel={cashRegisterActionLabel}
                     />
-                </div>
-            </div>
+                }
+            />
 
             <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
                 <div className="space-y-6">
@@ -510,13 +518,8 @@ export function SalesPage() {
                                             {selectedLastSale.receiptNumber}
                                         </span>
                                         <span className="font-medium text-slate-950">
-                                            {new Intl.DateTimeFormat("pt-BR", {
-                                                dateStyle: "short",
-                                                timeStyle: "short",
-                                            }).format(
-                                                new Date(
-                                                    selectedLastSale.createdAt,
-                                                ),
+                                            {formatDate(
+                                                selectedLastSale.createdAt,
                                             )}
                                         </span>
                                     </div>
@@ -573,19 +576,19 @@ export function SalesPage() {
                 }}
             />
 
-            {isSummaryModalOpen ? (
-                <SaleSummaryModal
-                    summary={summary}
-                    onClose={() => setIsSummaryModalOpen(false)}
-                    onConfirm={() => {
-                        void handleFinalizeSale();
-                    }}
-                    isSubmitting={isCreatingSale}
-                />
-            ) : null}
+            <SaleSummaryModal
+                open={isSummaryModalOpen}
+                summary={summary}
+                onClose={() => setIsSummaryModalOpen(false)}
+                onConfirm={() => {
+                    void handleFinalizeSale();
+                }}
+                isSubmitting={isCreatingSale}
+            />
 
-            {isReceiptModalOpen && activeSale ? (
+            {activeSale ? (
                 <ReceiptModal
+                    open={isReceiptModalOpen}
                     sale={activeSale}
                     errorMessage={receiptError}
                     isPrinting={isPrinting}
