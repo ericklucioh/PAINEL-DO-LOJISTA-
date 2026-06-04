@@ -76,6 +76,7 @@ Este repositório implementa um painel operacional para o dia a dia da loja. A p
 ├── docker-compose.yml  # Orquestra banco, API e frontend
 ├── Makefile            # Atalhos de desenvolvimento
 ├── DESAFIO.md          # Requisitos funcionais do projeto
+├── ENVIRONMENT.md      # Mapa central das variáveis de ambiente
 ├── ROTAS.md            # Contrato das rotas da API
 ├── SCHEMA.md           # Modelo de dados e regras do banco
 └── TASKS.md            # Lista de tarefas e evolução
@@ -89,10 +90,13 @@ Este repositório implementa um painel operacional para o dia a dia da loja. A p
 
 ## Configuração de Ambiente
 
+Veja o mapa central em [ENVIRONMENT.md](/home/erick/code/projs/PAINEL-DO-LOJISTA-/ENVIRONMENT.md) para a divisão completa das variáveis entre as 3 instâncias do projeto.
+
 O projeto já possui arquivos de exemplo de ambiente:
 
 - `/.env.example`
 - `/back-painel/.env.example`
+- `/front-painel/.env.example`
 
 Copie os arquivos de exemplo para os respectivos `.env` antes de rodar localmente, quando necessário.
 
