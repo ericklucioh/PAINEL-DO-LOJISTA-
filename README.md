@@ -164,6 +164,7 @@ npm run dev
 - `npm run build` - build TypeScript
 - `npm run test:run` - executa testes
 - `npm run prisma:seed` - popula o banco com dados iniciais
+- `scripts/seed.ts` - ponto de entrada em TypeScript para o seed do projeto
 
 ### Frontend
 
@@ -176,6 +177,7 @@ npm run dev
 1. Suba o banco com Docker Compose.
 2. Configure as variáveis de ambiente.
 3. Rode as migrations e o seed do Prisma, quando necessário.
+   - O seed principal também está exposto em `scripts/seed.ts`.
 4. Inicie o backend e o frontend.
 5. Acesse o painel e faça login com os usuários de teste do seed.
 

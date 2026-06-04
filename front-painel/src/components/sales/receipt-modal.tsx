@@ -52,7 +52,7 @@ export function ReceiptModal({
                         onClick={onRetryPrint}
                         disabled={isPrinting}
                     >
-                        {isPrinting ? "Imprimindo..." : "Reimprimir recibo"}
+                        {isPrinting ? "Imprimindo..." : "Tentar novamente"}
                     </Button>
                 </div>
             }

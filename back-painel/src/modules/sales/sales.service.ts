@@ -2,6 +2,11 @@ import { Prisma, PrismaClient } from "@prisma/client";
 import { createHttpError } from "../../utils/httpError";
 import type { SalesProductsService } from "../sales-products/sales-products.service";
 import type { SaleItemInput } from "../sales-products/sales-products.schema";
+import {
+    buildReceiptText,
+    createReceiptPrinter,
+    type ReceiptPrinter,
+} from "./receipt-printer";
 import type {
     CancelSaleResponse,
     CreateSaleResponse,
@@ -68,6 +73,7 @@ export interface SalesService {
 export interface CreateSalesServiceDependencies {
     prisma: PrismaClient;
     salesProductsService: SalesProductsService;
+    receiptPrinter?: ReceiptPrinter;
 }
 
 function toNumber(value: number | Prisma.Decimal): number {
@@ -151,6 +157,7 @@ function buildInventoryMovements(
 export function createSalesService({
     prisma,
     salesProductsService,
+    receiptPrinter = createReceiptPrinter(),
 }: CreateSalesServiceDependencies): SalesService {
     return {
         async create(input) {
@@ -277,18 +284,28 @@ export function createSalesService({
         },
 
         async printReceipt(input) {
-            const sale = await prisma.sale.findUnique({
+            const sale = (await prisma.sale.findUnique({
                 where: {
                     id: input.saleId,
                 },
-                select: {
-                    id: true,
+                include: {
+                    soldByUser: {
+                        select: {
+                            fullName: true,
+                        },
+                    },
+                    items: true,
                 },
-            });
+            })) as SaleWithItemsRecord | null;
 
             if (sale === null) {
                 throw createHttpError("Venda não encontrada", 404);
             }
+
+            const saleDto = toSaleDto(sale);
+            const receipt = buildReceiptText(saleDto);
+
+            await receiptPrinter.print(receipt);
 
             return {
                 success: true,

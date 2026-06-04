@@ -7,6 +7,14 @@ const EnvSchema = z.object({
     REFRESH_TOKEN_EXPIRES_IN: z.string().min(1).default("7d"),
     ACCESS_TOKEN_COOKIE_NAME: z.string().min(1).default("accessToken"),
     AUTH_COOKIE_NAME: z.string().min(1).default("refreshToken"),
+    RECEIPT_PRINTER_MODE: z.enum(["stdout", "tcp"]).default("stdout"),
+    RECEIPT_PRINTER_HOST: z.string().min(1).optional(),
+    RECEIPT_PRINTER_PORT: z.coerce.number().int().positive().default(9100),
+    RECEIPT_PRINTER_TIMEOUT_MS: z.coerce
+        .number()
+        .int()
+        .positive()
+        .default(5000),
     NODE_ENV: z.string().optional(),
 });
 
@@ -19,5 +27,9 @@ export const env = {
     refreshTokenExpiresIn: parsedEnv.REFRESH_TOKEN_EXPIRES_IN,
     accessTokenCookieName: parsedEnv.ACCESS_TOKEN_COOKIE_NAME,
     authCookieName: parsedEnv.AUTH_COOKIE_NAME,
+    receiptPrinterMode: parsedEnv.RECEIPT_PRINTER_MODE,
+    receiptPrinterHost: parsedEnv.RECEIPT_PRINTER_HOST ?? null,
+    receiptPrinterPort: parsedEnv.RECEIPT_PRINTER_PORT,
+    receiptPrinterTimeoutMs: parsedEnv.RECEIPT_PRINTER_TIMEOUT_MS,
     nodeEnv: parsedEnv.NODE_ENV ?? "development",
 } as const;
