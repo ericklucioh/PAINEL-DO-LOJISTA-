@@ -1,0 +1,6 @@
+{
+  "files.associations": {
+    "**/back-painel/prisma/test/schema.prisma": "plaintext",
+    "**/back-painel/generated/test-client/schema.prisma": "plaintext"
+  }
+}
