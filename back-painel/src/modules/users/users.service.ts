@@ -1,5 +1,5 @@
 import { hash } from "bcryptjs";
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 import { createHttpError } from "../../utils/httpError";
 import type {
     CreateUserBody,
@@ -154,16 +154,18 @@ export function createUsersService({
             }
 
             const passwordHash = await hash(input.password, 10);
+            const createData = {
+                cpf: input.cpf ?? null,
+                fullName: input.fullName,
+                email: input.email,
+                passwordHash,
+                role: input.role,
+                deactivatedAt: null,
+                deletedAt: null,
+            } as Prisma.UserUncheckedCreateInput;
+
             const createdUser = await prisma.user.create({
-                data: {
-                    cpf: input.cpf ?? null,
-                    fullName: input.fullName,
-                    email: input.email,
-                    passwordHash,
-                    role: input.role,
-                    deactivatedAt: null,
-                    deletedAt: null,
-                },
+                data: createData,
             });
 
             return {
