@@ -21,8 +21,13 @@ export const OpenCashRegisterResponseSchema = z.object({
     cashRegister: CashRegisterSchema,
 });
 
+export const CloseCashRegisterResponseSchema = OpenCashRegisterResponseSchema;
+
 export type OpenCashRegisterBody = z.infer<typeof OpenCashRegisterBodySchema>;
 export type CashRegisterDto = z.infer<typeof CashRegisterSchema>;
 export type OpenCashRegisterResponse = z.infer<
     typeof OpenCashRegisterResponseSchema
+>;
+export type CloseCashRegisterResponse = z.infer<
+    typeof CloseCashRegisterResponseSchema
 >;

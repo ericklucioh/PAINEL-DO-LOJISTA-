@@ -13,6 +13,12 @@ export function createCashRegistersRouter({
     const router = Router();
 
     router.post("/open", verifyToken, requireRole("VENDEDOR"), controller.open);
+    router.post(
+        "/close",
+        verifyToken,
+        requireRole("VENDEDOR"),
+        controller.close,
+    );
 
     return router;
 }

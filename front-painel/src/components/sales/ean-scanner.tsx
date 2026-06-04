@@ -6,14 +6,16 @@ type EanScannerProps = {
     value: string;
     onValueChange: (value: string) => void;
     onSubmit: () => void;
-    onOpenCashRegister: () => void;
+    onCashRegisterAction: () => void;
+    cashRegisterActionLabel: string;
 };
 
 export function EanScanner({
     value,
     onValueChange,
     onSubmit,
-    onOpenCashRegister,
+    onCashRegisterAction,
+    cashRegisterActionLabel,
 }: EanScannerProps) {
     return (
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -30,9 +32,9 @@ export function EanScanner({
                 <Button
                     type="button"
                     variant="outline"
-                    onClick={onOpenCashRegister}
+                    onClick={onCashRegisterAction}
                 >
-                    Abrir caixa
+                    {cashRegisterActionLabel}
                 </Button>
             </div>
 

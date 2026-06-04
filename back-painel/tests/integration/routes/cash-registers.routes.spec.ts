@@ -74,6 +74,53 @@ describe("cash-registers routes", () => {
         });
     });
 
+    it("closes the active cash register for the seller flow", async () => {
+        const vendor = await loginAsVendor(testApp.app);
+
+        await request(testApp.app)
+            .post("/api/cash-registers/open")
+            .set("Authorization", bearer(vendor.accessToken))
+            .send({
+                initialBalance: 150,
+                note: "Abertura do PDV",
+            })
+            .expect(201);
+
+        const response = await request(testApp.app)
+            .post("/api/cash-registers/close")
+            .set("Authorization", bearer(vendor.accessToken))
+            .send({});
+
+        expect(response.statusCode).toBe(200);
+        expect(response.body).toMatchObject({
+            cashRegister: {
+                id: expect.any(String),
+                openedByUserId: "user_vendor_1",
+                openedByUserName: "Joao Vendedor",
+                initialBalance: 150,
+                currentBalance: 150,
+                status: "CLOSED",
+                note: "Abertura do PDV",
+                openedAt: expect.any(String),
+                closedAt: expect.any(String),
+            },
+        });
+    });
+
+    it("rejects closing a cash register when the seller has none open", async () => {
+        const vendor = await loginAsVendor(testApp.app);
+
+        const response = await request(testApp.app)
+            .post("/api/cash-registers/close")
+            .set("Authorization", bearer(vendor.accessToken))
+            .send({});
+
+        expect(response.statusCode).toBe(400);
+        expect(response.body).toMatchObject({
+            message: "Não existe um caixa aberto para este usuário",
+        });
+    });
+
     it("rejects admin access on vendor-only cash register routes", async () => {
         const admin = await loginAsWrongUser(testApp.app, "VENDEDOR");
 
@@ -91,6 +138,20 @@ describe("cash-registers routes", () => {
         });
     });
 
+    it("rejects admin access on cash register close routes", async () => {
+        const admin = await loginAsWrongUser(testApp.app, "VENDEDOR");
+
+        const response = await request(testApp.app)
+            .post("/api/cash-registers/close")
+            .set("Authorization", bearer(admin.accessToken))
+            .send({});
+
+        expect(response.statusCode).toBe(403);
+        expect(response.body).toMatchObject({
+            message: "Acesso negado",
+        });
+    });
+
     it("rejects cash register open requests without a token", async () => {
         const response = await request(testApp.app)
             .post("/api/cash-registers/open")
@@ -98,6 +159,17 @@ describe("cash-registers routes", () => {
                 initialBalance: 150,
                 note: "Sem token",
             });
+
+        expect(response.statusCode).toBe(401);
+        expect(response.body).toMatchObject({
+            message: "Token ausente",
+        });
+    });
+
+    it("rejects cash register close requests without a token", async () => {
+        const response = await request(testApp.app)
+            .post("/api/cash-registers/close")
+            .send({});
 
         expect(response.statusCode).toBe(401);
         expect(response.body).toMatchObject({
@@ -120,6 +192,26 @@ describe("cash-registers routes", () => {
         expect(response.body).toMatchObject({
             message: "Validation error",
         });
+    });
+
+    it("closes the cash register even when an empty payload is sent", async () => {
+        const vendor = await loginAsVendor(testApp.app);
+
+        await request(testApp.app)
+            .post("/api/cash-registers/open")
+            .set("Authorization", bearer(vendor.accessToken))
+            .send({
+                initialBalance: 150,
+                note: "Abertura do PDV",
+            })
+            .expect(201);
+
+        const response = await request(testApp.app)
+            .post("/api/cash-registers/close")
+            .set("Authorization", bearer(vendor.accessToken))
+            .send({ any: "payload" });
+
+        expect(response.statusCode).toBe(200);
     });
 
     it("rejects invalid and expired bearer tokens on cash register routes", async () => {
@@ -153,6 +245,16 @@ describe("cash-registers routes", () => {
 
         expect(expiredResponse.statusCode).toBe(401);
         expect(expiredResponse.body).toMatchObject({
+            message: "Token inválido",
+        });
+
+        const expiredCloseResponse = await request(testApp.app)
+            .post("/api/cash-registers/close")
+            .set("Authorization", `Bearer ${expiredToken}`)
+            .send({});
+
+        expect(expiredCloseResponse.statusCode).toBe(401);
+        expect(expiredCloseResponse.body).toMatchObject({
             message: "Token inválido",
         });
     });

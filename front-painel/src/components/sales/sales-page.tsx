@@ -107,7 +107,12 @@ export function SalesPage() {
     }, [toast]);
 
     useEffect(() => {
-        if (cashRegister === null || typeof window === "undefined") {
+        if (typeof window === "undefined") {
+            return;
+        }
+
+        if (cashRegister === null) {
+            window.localStorage.removeItem("painel-do-lojista:cash-register");
             return;
         }
 
@@ -186,6 +191,45 @@ export function SalesPage() {
             });
         }
     };
+
+    const handleCloseCashRegister = async () => {
+        if (cashRegister === null) {
+            return;
+        }
+
+        try {
+            const response = await cashRegistersService.close();
+            setCashRegister(null);
+            setIsCashRegisterModalOpen(false);
+            toast({
+                variant: "success",
+                title: "Caixa fechado com sucesso",
+            });
+            return response;
+        } catch (error) {
+            const message = getApiErrorMessage(
+                error,
+                "Não foi possível fechar o caixa.",
+            );
+            toast({
+                variant: "error",
+                title: "Erro ao fechar caixa",
+                description: message,
+            });
+        }
+    };
+
+    const handleCashRegisterAction = () => {
+        if (cashRegister === null) {
+            setIsCashRegisterModalOpen(true);
+            return;
+        }
+
+        void handleCloseCashRegister();
+    };
+
+    const cashRegisterActionLabel =
+        cashRegister === null ? "Abrir caixa" : "Fechar caixa";
 
     const handleFinalizeSale = async () => {
         if (cashRegister === null) {
@@ -348,9 +392,8 @@ export function SalesPage() {
 
                     <CashRegisterStatus
                         cashRegister={cashRegister}
-                        onOpenCashRegister={() =>
-                            setIsCashRegisterModalOpen(true)
-                        }
+                        onCashRegisterAction={handleCashRegisterAction}
+                        cashRegisterActionLabel={cashRegisterActionLabel}
                     />
                 </div>
             </div>
@@ -363,9 +406,8 @@ export function SalesPage() {
                         onSubmit={() => {
                             void handleAddProduct();
                         }}
-                        onOpenCashRegister={() =>
-                            setIsCashRegisterModalOpen(true)
-                        }
+                        onCashRegisterAction={handleCashRegisterAction}
+                        cashRegisterActionLabel={cashRegisterActionLabel}
                     />
 
                     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">

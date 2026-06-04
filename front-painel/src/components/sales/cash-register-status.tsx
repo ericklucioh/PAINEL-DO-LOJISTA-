@@ -6,12 +6,14 @@ import { formatCurrency } from "@/components/sales/sales.helpers";
 
 type CashRegisterStatusProps = {
     cashRegister: CashRegister | null;
-    onOpenCashRegister: () => void;
+    onCashRegisterAction: () => void;
+    cashRegisterActionLabel: string;
 };
 
 export function CashRegisterStatus({
     cashRegister,
-    onOpenCashRegister,
+    onCashRegisterAction,
+    cashRegisterActionLabel,
 }: CashRegisterStatusProps) {
     return (
         <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm text-blue-50">
@@ -36,9 +38,9 @@ export function CashRegisterStatus({
                     type="button"
                     variant="outline"
                     className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                    onClick={onOpenCashRegister}
+                    onClick={onCashRegisterAction}
                 >
-                    {cashRegister ? "Abrir outro caixa" : "Abrir caixa"}
+                    {cashRegisterActionLabel}
                 </Button>
             </div>
         </div>
