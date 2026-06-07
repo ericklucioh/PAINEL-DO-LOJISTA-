@@ -4,6 +4,17 @@ API do Painel do Lojista em Node.js, Express e Prisma.
 
 Este app concentra autenticação, usuários, produtos, estoque, caixa e vendas.
 
+## Fluxo Principal
+
+Este backend foi projetado para ser executado junto com o resto da stack via Docker.
+O caminho oficial do repositório é subir tudo com:
+
+```bash
+make run-dev
+```
+
+Se você quiser rodar o backend isoladamente, faça isso só como exceção para desenvolvimento local ou troubleshooting.
+
 ## Requisitos
 
 - Node.js 20+
@@ -73,6 +84,11 @@ Se o banco já estiver provisionado, você também pode aplicar migrations e see
 npm run prisma:migrate:deploy
 npm run prisma:seed
 ```
+
+## Docker
+
+Quando usado pelo fluxo principal do repositório, o backend sobe via Docker Compose e usa as variáveis `DATABASE_URL_DOCKER` e `SHADOW_DATABASE_URL_DOCKER`.
+Não é necessário executar `npm run dev` para usar o projeto como demonstração.
 
 ## Testes
 

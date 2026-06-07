@@ -1,0 +1,35 @@
+name: Docker
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Backend
+            context: back-painel
+            dockerfile: back-painel/Dockerfile.dev
+          - name: Frontend
+            context: front-painel
+            dockerfile: front-painel/Dockerfile.dev
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build ${{ matrix.name }} image
+        run: docker build -f "${{ matrix.dockerfile }}" "${{ matrix.context }}"

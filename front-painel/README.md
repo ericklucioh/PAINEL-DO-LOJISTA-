@@ -4,6 +4,18 @@ Interface web do Painel do Lojista em Next.js com App Router.
 
 Este app cuida da navegação, da experiência de operação e da camada de sessão no browser.
 
+## Fluxo Principal
+
+O frontend faz parte da stack Docker do repositório.
+O uso esperado para rodar a aplicação inteira é:
+
+```bash
+make run-dev
+```
+
+Isso sobe frontend, backend, MySQL e Adminer de uma vez.
+Rodar o frontend isoladamente só faz sentido para ajustes pontuais.
+
 ## Requisitos
 
 - Node.js 20+
@@ -46,6 +58,11 @@ cp .env.example .env
 3. Inicie o frontend com `npm run dev`.
 
 O app usa o backend como origem de dados e mantém a sessão por meio da camada intermediária do lado servidor.
+
+## Docker
+
+No fluxo principal do projeto, o frontend sobe por Docker Compose e já recebe `BACKEND_URL` apontando para o serviço interno da stack.
+Esse é o caminho recomendado para demonstração pública e para replicar o ambiente completo.
 
 ## Build
 

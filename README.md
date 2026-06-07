@@ -40,30 +40,10 @@ O projeto cobre o fluxo central de um MVP de varejo:
 - [back-painel/README.md](./back-painel/README.md) explica o backend.
 - [front-painel/README.md](./front-painel/README.md) explica o frontend.
 
-## Requisitos
-
-- Node.js 20+ para execução local.
-- Docker e Docker Compose para subir a stack completa.
-- npm para instalar dependências em cada app.
-
-## Configuração
-
-Existem arquivos de exemplo para as três camadas do projeto:
-
-- [`.env.example`](./.env.example)
-- [`back-painel/.env.example`](./back-painel/.env.example)
-- [`front-painel/.env.example`](./front-painel/.env.example)
-
-Fluxo recomendado:
-
-1. Copie os arquivos de exemplo para os respectivos `.env`.
-2. Ajuste `DATABASE_URL`, `SHADOW_DATABASE_URL`, `JWT_SECRET` e `REFRESH_TOKEN_SECRET`.
-3. Configure `BACKEND_URL` no frontend para o endereço da API.
-4. Use `make run-dev` para subir a stack com Docker ou rode os apps localmente.
-
 ## Como Rodar
 
-### Com Docker
+O projeto foi pensado para rodar principalmente com Docker.
+O caminho oficial é:
 
 ```bash
 make run-dev
@@ -81,23 +61,32 @@ Serviços expostos por padrão:
 - Backend: `http://localhost:3001`
 - Adminer: `http://localhost:8080`
 
-### Localmente, sem Docker
+## Requisitos
 
-Backend:
+- Docker e Docker Compose para subir a stack completa.
+- `make` para usar os atalhos do repositório.
+- Node.js 20+ somente se você quiser executar algum app manualmente fora do Docker.
+- npm somente para manutenção local dos apps fora do fluxo principal.
 
-```bash
-cd back-painel
-npm install
-npm run dev
-```
+## Configuração
 
-Frontend:
+Existem arquivos de exemplo para as três camadas do projeto:
 
-```bash
-cd front-painel
-npm install
-npm run dev
-```
+- [`.env.example`](./.env.example)
+- [`back-painel/.env.example`](./back-painel/.env.example)
+- [`front-painel/.env.example`](./front-painel/.env.example)
+
+Fluxo recomendado:
+
+1. Copie os arquivos de exemplo para os respectivos `.env`.
+2. Ajuste `DATABASE_URL`, `SHADOW_DATABASE_URL`, `JWT_SECRET` e `REFRESH_TOKEN_SECRET`.
+3. Configure `BACKEND_URL` no frontend para o endereço da API.
+4. Use `make run-dev` para subir a stack completa.
+
+### Execução manual
+
+A execução sem Docker existe, mas não é o fluxo principal do projeto.
+Use apenas se você estiver ajustando o backend ou o frontend isoladamente.
 
 ## Comandos Principais
 
