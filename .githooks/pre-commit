@@ -21,20 +21,36 @@ while IFS= read -r -d '' file; do
 	esac
 done < <(git diff --cached --name-only -z --diff-filter=ACMR)
 
+find_prettier_bin() {
+	local candidates=(
+		"$repo_root/back-painel/node_modules/.bin/prettier"
+		"$repo_root/front-painel/node_modules/.bin/prettier"
+	)
+
+	for candidate in "${candidates[@]}"; do
+		if [[ -x "$candidate" ]]; then
+			printf '%s\n' "$candidate"
+			return 0
+		fi
+	done
+
+	return 1
+}
+
 format_files() {
 	local root="$1"
 	shift
 
 	local -a files=("$@")
-	local prettier_bin="$repo_root/back-painel/node_modules/.bin/prettier"
+	local prettier_bin
 
 	if (( ${#files[@]} == 0 )); then
 		return 0
 	fi
 
-	if [[ ! -x "$prettier_bin" ]]; then
-		echo "prettier not found in back-painel. Run npm install there before committing." >&2
-		exit 1
+	if ! prettier_bin=$(find_prettier_bin); then
+		echo "prettier not found in back-painel or front-painel. Skipping automatic formatting." >&2
+		return 0
 	fi
 
 	(cd "$repo_root/$root" && "$prettier_bin" --ignore-unknown --write -- "${files[@]}")
@@ -49,15 +65,15 @@ format_files() {
 
 format_generic_files() {
 	local -a files=("$@")
-	local prettier_bin="$repo_root/back-painel/node_modules/.bin/prettier"
+	local prettier_bin
 
 	if (( ${#files[@]} == 0 )); then
 		return 0
 	fi
 
-	if [[ ! -x "$prettier_bin" ]]; then
-		echo "prettier not found in back-painel. Run npm install there before committing." >&2
-		exit 1
+	if ! prettier_bin=$(find_prettier_bin); then
+		echo "prettier not found in back-painel or front-painel. Skipping automatic formatting." >&2
+		return 0
 	fi
 
 	(cd "$repo_root" && "$prettier_bin" --ignore-unknown --write -- "${files[@]}")
