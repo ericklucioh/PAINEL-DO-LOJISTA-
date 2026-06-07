@@ -22,7 +22,6 @@ Use this file as the lightweight rule set for this repo. Follow `DESAFIO.md` for
 - Use explicit types for inputs, outputs, and shared contracts.
 - Validate external input with `zod`.
 - Do not pass raw objects across layers when a typed contract is better.
-- Avoid dynamic property access, `getattr`-style patterns, and runtime type guessing in core logic.
 
 ## Architecture
 

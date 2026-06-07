@@ -50,4 +50,5 @@ setup-hooks:
 
 test:
 	@set -e; \
-	( cd $(BACKEND_DIR) && npm run test:run )
+	$(COMPOSE) up -d mysql; \
+	$(COMPOSE) run --rm back-painel npm run test:run
