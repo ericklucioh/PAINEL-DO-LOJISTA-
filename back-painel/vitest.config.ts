@@ -7,5 +7,6 @@ export default defineConfig({
         include: ["tests/**/*.spec.ts"],
         fileParallelism: false,
         clearMocks: true,
+        setupFiles: ["./tests/setup.ts"],
     },
 });
